@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="grid two">
+  <section class="card">
+    <h1>Review Leave</h1>
+    <div class="kv">
+      <div class="k">Employee</div><div class="v"><b>{{ lr.user.username }}</b> <span class="muted">({{ lr.user.email }})</span></div>
+      <div class="k">Label</div><div class="v">{{ lr.leave_label }}</div>
+      <div class="k">Dates</div><div class="v">{{ lr.start_date }} → {{ lr.end_date }} ({{ lr.duration_days }} day(s))</div>
+      <div class="k">Reason</div><div class="v pre">{{ lr.reason|default:"—" }}</div>
+      <div class="k">Status</div><div class="v"><span class="pill {{ lr.status|lower }}">{{ lr.get_status_display }}</span></div>
+    </div>
+
+    <form method="post" class="form" style="margin-top:14px;">
+      {% csrf_token %}
+      <div class="field">
+        <label>Manager note (optional)</label>
+        <textarea name="manager_note" rows="3" placeholder="Optional note...">{{ lr.manager_note }}</textarea>
+      </div>
+      <div class="actions">
+        {% if lr.status == "PENDING" %}
+          <button class="btn" name="action" value="approve" type="submit">Approve</button>
+          <button class="btn danger" name="action" value="reject" type="submit">Reject</button>
+        {% else %}
+          <p class="muted">This request is already decided.</p>
+        {% endif %}
+        <a class="btn ghost" href="{% url 'leave:manager_requests' %}">Back</a>
+      </div>
+    </form>
+  </section>
+
+  <section class="card subtle">
+    <h2>Employee context</h2>
+    <div class="profile">
+      <div class="avatar">
+        <div class="avatar-placeholder"></div>
+      </div>
+      <div>
+        <div class="k">Current project</div>
+        <div class="v">{{ profile.current_project|default:"—" }}</div>
+        <div class="k" style="margin-top:10px;">Pending tasks</div>
+        <div class="v pre">{{ profile.current_tasks|default:"—" }}</div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

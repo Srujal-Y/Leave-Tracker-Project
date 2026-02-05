@@ -1,0 +1,14 @@
+.git/
+.venv/
+.venv_test/
+__pycache__/
+*.pyc
+.env
+.env.*
+db.sqlite3
+media/
+staticfiles/
+*.zip
+.venv/
+.venv_test/
+**/__pycache__/

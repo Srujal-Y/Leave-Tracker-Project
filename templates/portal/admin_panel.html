@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <div class="flex">
+    <div>
+      <h1>Admin Panel</h1>
+      <p class="muted">Create employees and enable/disable access.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="{% url 'portal:admin_create_employee' %}">Add employee</a>
+    </div>
+  </div>
+
+  <form method="get" class="filters" style="margin-top:10px;">
+    <input name="q" value="{{ q }}" placeholder="Search by email / username / name" style="max-width:420px;"/>
+    <button class="btn ghost" type="submit">Search</button>
+    {% if q %}
+      <a class="btn ghost" href="{% url 'portal:admin_panel' %}">Clear</a>
+    {% endif %}
+  </form>
+
+  <div class="table">
+    <div class="row head" style="grid-template-columns: 1.2fr 1fr 1.2fr 0.6fr 1.2fr;">
+      <div>User</div><div>Name</div><div>Email</div><div>Active</div><div>Actions</div>
+    </div>
+    {% for u in users %}
+      <div class="row" style="grid-template-columns: 1.2fr 1fr 1.2fr 0.6fr 1.2fr;">
+        <div><b>{{ u.username }}</b></div>
+        <div class="muted">{{ u.get_full_name|default:"—" }}</div>
+        <div class="muted">{{ u.email|default:"—" }}</div>
+        <div>
+          {% if u.is_active %}
+            <span class="pill approved">Yes</span>
+          {% else %}
+            <span class="pill rejected">No</span>
+          {% endif %}
+        </div>
+        <div class="actions">
+          <form method="post" action="{% url 'portal:admin_toggle_user_active' u.id %}">
+            {% csrf_token %}
+            <button class="btn ghost" type="submit">{% if u.is_active %}Disable{% else %}Enable{% endif %}</button>
+          </form>
+          <a class="btn danger" href="{% url 'portal:admin_delete_user' u.id %}">Delete</a>
+        </div>
+      </div>
+    {% empty %}
+      <div class="row"><div class="muted">No users found.</div></div>
+    {% endfor %}
+  </div>
+
+  <div class="muted small" style="margin-top:12px;">
+    Employees created here get an unusable password by default. They should use <b>Forgot password</b> to set their password via OTP.
+  </div>
+</section>
+{% endblock %}

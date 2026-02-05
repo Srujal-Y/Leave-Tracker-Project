@@ -1,0 +1,6 @@
+# Use this for Neon/Postgres deployments (recommended Python 3.12+ on the server).
+-r requirements.txt
+
+# Postgres driver (choose one)
+psycopg[binary]>=3.2
+# Alternatively (older driver): psycopg2-binary>=2.9

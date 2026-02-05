@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h1>Update profile</h1>
+  <p class="muted">Keep your current project/tasks updated so managers can coordinate leave coverage.</p>
+  <form method="post" class="form">
+    {% csrf_token %}
+    <div class="field">
+      <label>Phone number</label>
+      {{ form.phone_number }}
+    </div>
+    <div class="field">
+      <label>Current project</label>
+      {{ form.current_project }}
+    </div>
+    <div class="field">
+      <label>Pending tasks/work</label>
+      {{ form.current_tasks }}
+    </div>
+    <button class="btn" type="submit">Save</button>
+    <a class="btn ghost" href="{% url 'portal:me_dashboard' %}">Cancel</a>
+  </form>
+</section>
+{% endblock %}
