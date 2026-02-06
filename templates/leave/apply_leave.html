@@ -1,70 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Apply Leave{% endblock %}
 {% block content %}
-<div class="page">
-  <div class="header">
-    <div>
-      <h1>Apply Leave</h1>
-      <p class="muted">Your leave will be recorded immediately and visible to the whole company.</p>
-    </div>
+<div class="centerwrap"><section class="card formcard"><h1>{% if editing %}Edit{% else %}Apply{% endif %} Leave</h1>
+{% if holiday_hint %}<div class="msg info">Selected range includes {{ holiday_hint.holidays }} holiday day(s) and {{ holiday_hint.weekends }} weekend day(s).</div>{% endif %}
+<form method="post">{% csrf_token %}
+  {{ form.as_p }}
+  <div class="formactions">
+    <button class="btn" type="submit">{% if editing %}Save Changes{% else %}Submit Leave{% endif %}</button>
+    <a class="btn ghost" href="{% url 'leave:company_leaves' %}">Back</a>
   </div>
-
-  <div class="centerwrap">
-    <section class="card formcard">
-      <form method="post">
-        {% csrf_token %}
-        <div class="formgrid">
-          <div class="field">
-            <label>{{ form.leave_type.label }}</label>
-            {{ form.leave_type }}
-          </div>
-          <div class="field">
-            <label>{{ form.leave_label.label }}</label>
-            {{ form.leave_label }}
-            <div class="help">Example: Doctor visit, Family emergency, Vacation. Any text.</div>
-          </div>
-
-          <div class="gridcols2">
-            <div class="field">
-              <label>{{ form.start_date.label }}</label>
-              {{ form.start_date }}
-            </div>
-            <div class="field">
-              <label>{{ form.end_date.label }}</label>
-              {{ form.end_date }}
-            </div>
-          </div>
-
-          <div class="gridcols2">
-            <div class="field">
-              <label>{{ form.portion.label }}</label>
-              {{ form.portion }}
-              <div class="help">Full day, half day, or quarter day (applied to the last day).</div>
-            </div>
-            <div class="field">
-              <label>Requested days (override)</label>
-              {{ form.override_units }}
-              <div class="help">Auto-calculated from dates + portion. Change only if you need an exact number.</div>
-            </div>
-          </div>
-
-          <div class="field">
-            <label>{{ form.reason_preset.label }}</label>
-            {{ form.reason_preset }}
-            <div class="help">Pick a common reason, or type your own below.</div>
-          </div>
-          <div class="field">
-            <label>{{ form.reason_text.label }}</label>
-            {{ form.reason_text }}
-          </div>
-        </div>
-
-        <div class="formactions">
-          <button class="btn" type="submit">Submit</button>
-          <a class="btn ghost" href="{% url 'portal:me_dashboard' %}">Back</a>
-        </div>
-      </form>
-    </section>
-  </div>
-</div>
+</form>
+<p class="muted small" style="margin-top:10px;">Tip: add <code>?start=YYYY-MM-DD&end=YYYY-MM-DD</code> to this URL to preview holiday/weekend counts.</p>
+</section></div>
 {% endblock %}

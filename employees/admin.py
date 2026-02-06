@@ -3,7 +3,7 @@ from .models import EmployeeProfile, AllowedEmail
 
 @admin.register(EmployeeProfile)
 class EmployeeProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "current_project")
+    list_display = ("user", "role", "current_project")
     search_fields = ("user__username", "user__email", "current_project")
 
 
