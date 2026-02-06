@@ -573,4 +573,23 @@ AWS_S3_ADDRESSING_STYLE=path
 AWS_S3_SIGNATURE_VERSION=s3v4
 ```
 
+When these values are set, `django-storages` is enabled automatically and profile photos are served from object storage.
+
+
+## Railway Raw Variable Script (Copy/Paste)
+
+A full ready-to-paste Railway variables template is included at:
+
+- `railway.env.raw.example`
+
+### Railway CLI quick import
+If you use Railway CLI, you can import the same variables by converting this file to your shell env and setting each variable.
+
+Example (macOS/Linux):
+```bash
+set -a
+source railway.env.raw.example
+set +a
+```
+Then configure them in Railway dashboard Raw Editor (or with Railway CLI commands in your workflow).
 
