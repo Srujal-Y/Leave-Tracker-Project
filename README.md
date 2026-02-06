@@ -573,4 +573,4 @@ AWS_S3_ADDRESSING_STYLE=path
 AWS_S3_SIGNATURE_VERSION=s3v4
 ```
 
-When these values are set, `django-storages` is enabled automatically and profile photos are served from object storage.
+
