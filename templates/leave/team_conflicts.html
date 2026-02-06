@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card"><h1>Team Conflict Check - {{ date_obj }}</h1>
+{% if warning %}<div class="msg info">Warning: many employees are off on this date.</div>{% endif %}
+{% for l in leaves %}<p>{{ l.employee.username }} · {{ l.leave_label }}</p>{% empty %}<p>No conflicts.</p>{% endfor %}
+</section>{% endblock %}

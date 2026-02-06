@@ -28,9 +28,11 @@
           <div class="muted">Signed in as <b>{{ user.username }}</b></div>
           <a class="btn ghost" href="{% url 'portal:me_dashboard' %}">Dashboard</a>
           <a class="btn ghost" href="{% url 'leave:company_leaves' %}">Company leaves</a>
+          <a class="btn ghost" href="{% url 'leave:leave_settings' %}">Leave Settings</a>
           <a class="btn ghost" href="{% url 'portal:edit_profile' %}">Profile</a>
           {% if user.is_staff %}
             <a class="btn ghost" href="{% url 'portal:admin_panel' %}">Admin Panel</a>
+            <a class="btn ghost" href="{% url 'leave:audit_trail' %}">Audit Trail</a>
           {% endif %}
           <a class="btn danger" href="{% url 'portal:logout' %}">Logout</a>
         {% endif %}
@@ -39,7 +41,7 @@
 
     <main class="container">
       {% if messages %}
-        <div class="messages">
+        <div class="messages toast-stack">
           {% for m in messages %}
             <div class="msg {{ m.tags|default:'info' }}">{{ m }}</div>
           {% endfor %}

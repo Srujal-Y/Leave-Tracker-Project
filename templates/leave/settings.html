@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h1>Leave Settings</h1>
+  <p class="muted">HR/Admin can manage leave type quotas, reason presets, and holiday dates.</p>
+
+  <div class="grid two">
+    <div>
+      <h2>Leave Types</h2>
+      <form method="post">{% csrf_token %}{{ type_form.as_p }}<button class="btn" name="create_type" type="submit">Save Leave Type</button></form>
+      <div style="margin-top:10px;">
+        {% for lt in leave_types %}
+          <div class="actions" style="margin-bottom:8px;justify-content:space-between;">
+            <span>{{ lt.name }} — quota {{ lt.annual_quota }} day(s) — {% if lt.active %}Active{% else %}Inactive{% endif %}</span>
+            <form method="post" style="display:inline;">{% csrf_token %}<button class="btn ghost" name="toggle_type" value="{{ lt.id }}" type="submit">Toggle</button></form>
+            <form method="post" style="display:inline;">{% csrf_token %}<button class="btn danger" name="delete_type" value="{{ lt.id }}" type="submit">Delete</button></form>
+          </div>
+        {% empty %}<p class="muted">No leave types found.</p>{% endfor %}
+      </div>
+    </div>
+    <div>
+      <h2>Reason Presets</h2>
+      <form method="post">{% csrf_token %}{{ reason_form.as_p }}<button class="btn" name="create_reason" type="submit">Save Reason Preset</button></form>
+      <div style="margin-top:10px;">
+        {% for reason in reasons %}
+          <div class="actions" style="margin-bottom:8px;justify-content:space-between;">
+            <span>{{ reason.label }} — {% if reason.active %}Active{% else %}Inactive{% endif %}</span>
+            <form method="post" style="display:inline;">{% csrf_token %}<button class="btn ghost" name="toggle_reason" value="{{ reason.id }}" type="submit">Toggle</button></form>
+            <form method="post" style="display:inline;">{% csrf_token %}<button class="btn danger" name="delete_reason" value="{{ reason.id }}" type="submit">Delete</button></form>
+          </div>
+        {% empty %}<p class="muted">No reason presets found.</p>{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:16px;">Holidays (Admin Custom iCal Dates)</h2>
+  <form method="post">{% csrf_token %}{{ holiday_form.as_p }}<button class="btn" name="create_holiday" type="submit">Save Holiday</button></form>
+  <div style="margin-top:10px;">
+    {% for holiday in holidays %}
+      <div class="actions" style="margin-bottom:8px;justify-content:space-between;">
+        <span>{{ holiday.day }} — {{ holiday.title }} — {% if holiday.active %}Active{% else %}Inactive{% endif %}</span>
+        <form method="post" style="display:inline;">{% csrf_token %}<button class="btn ghost" name="toggle_holiday" value="{{ holiday.id }}" type="submit">Toggle</button></form>
+        <form method="post" style="display:inline;">{% csrf_token %}<button class="btn danger" name="delete_holiday" value="{{ holiday.id }}" type="submit">Delete</button></form>
+      </div>
+    {% empty %}
+      <p class="muted">No holidays configured.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

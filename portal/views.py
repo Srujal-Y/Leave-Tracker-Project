@@ -5,7 +5,7 @@ from secrets import randbelow
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from employees.models import EmployeeProfile
@@ -76,7 +76,7 @@ def me_dashboard(request):
     profile = request.user.employee_profile
     # LeaveRequest uses `employee` (FK to AUTH_USER_MODEL), not `user`.
     my_recent = (
-        LeaveRequest.objects.filter(employee=request.user)
+        LeaveRequest.objects.filter(employee=request.user, deleted_at__isnull=True)
         .select_related("leave_type")
         .order_by("-created_at")[:10]
     )
@@ -85,6 +85,12 @@ def me_dashboard(request):
         .order_by("-created_at")[:8]
     )
     is_mgr = is_manager_email(getattr(request.user, "email", ""))
+    from leave.models import LeaveType
+    leave_balances = []
+    for lt in LeaveType.objects.filter(active=True):
+        used = LeaveRequest.objects.filter(employee=request.user, leave_type=lt, status=LeaveRequest.Status.AUTHENTICATED, deleted_at__isnull=True).aggregate(s=Sum("requested_units")).get("s") or 0
+        leave_balances.append({"type": lt, "used": used, "remaining": lt.annual_quota - used})
+
     return render(
         request,
         "portal/me_dashboard.html",
@@ -95,6 +101,7 @@ def me_dashboard(request):
             "my_recent_requests": my_recent,
             "company_recent_requests": company_recent,
             "is_manager": is_mgr,
+            "leave_balances": leave_balances,
         },
     )
 
@@ -146,7 +153,7 @@ def password_reset_request(request):
                 redirect("portal:password_reset_verify", token=otp.token).url
             )
             try:
-                send_password_reset_otp(to_email=email, otp_code=otp.code, reset_link=reset_link)
+                send_password_reset_otp(to_email=(user.email or email), otp_code=otp.code, reset_link=reset_link)
                 messages.success(request, "OTP sent. Please check your email.")
                 return redirect("portal:password_reset_verify", token=otp.token)
             except Exception:
@@ -280,3 +287,9 @@ def admin_delete_user(request, user_id: int):
         return redirect("portal:admin_panel")
 
     return render(request, "portal/admin_delete_user.html", {"u": user})
+
+
+from django.http import JsonResponse
+
+def health_check(request):
+    return JsonResponse({"status": "ok"})

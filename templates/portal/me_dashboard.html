@@ -3,68 +3,29 @@
 <div class="grid two">
   <section class="card">
     <h1>Dashboard</h1>
-    <p class="muted">Apply for leave and keep your work context updated so the company can coordinate better.</p>
     <div class="actions">
       <a class="btn" href="{% url 'leave:apply_leave' %}">Apply for Leave</a>
       <a class="btn ghost" href="{% url 'leave:company_leaves' %}">Company Leave Board</a>
-      <a class="btn ghost" href="{% url 'portal:edit_profile' %}">Update Profile</a>
+      <a class="btn ghost" href="{% url 'leave:my_ical' %}">Export iCal</a>
     </div>
-
     <div class="profile">
       <div class="avatar">
-        {% if profile.photo %}
-          <img src="{{ profile.photo.url }}" alt="photo"/>
-        {% else %}
-          <div class="avatar-placeholder"></div>
-        {% endif %}
+        {% if profile.photo %}<img src="{{ profile.photo.url }}" alt="Profile photo">{% else %}<div class="avatar-placeholder"></div>{% endif %}
       </div>
       <div>
-        <div class="k">Current project</div>
-        <div class="v">{{ profile.current_project|default:"—" }}</div>
-        <div class="k" style="margin-top:10px;">Pending tasks</div>
-        <div class="v pre">{{ profile.current_tasks|default:"—" }}</div>
+        <h2>Profile Card - Remaining Balances</h2>
+        {% for b in leave_balances %}
+          <p><b>{{ b.type.name }}</b>: Remaining {{ b.remaining }} / {{ b.type.annual_quota }} days</p>
+        {% empty %}<p class="muted">No leave entitlements configured yet.</p>{% endfor %}
       </div>
     </div>
   </section>
 
   <section class="card">
-    <h2>My recent leaves</h2>
-    {% if my_recent %}
-      <div class="table">
-        <div class="row head">
-          <div>Type</div><div>Label</div><div>Dates</div><div>Days</div>
-        </div>
-        {% for r in my_recent %}
-          <div class="row" style="grid-template-columns: 0.9fr 1.2fr 1.5fr 0.6fr;">
-            <div class="muted">{{ r.leave_type.name|default:"—" }}</div>
-            <div><b>{{ r.leave_label }}</b></div>
-            <div class="muted">{{ r.start_date }} → {{ r.end_date }}</div>
-            <div><span class="pill ok">{{ r.requested_units }}d</span></div>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <p class="muted">No leaves yet.</p>
-    {% endif %}
-
-    <h2 style="margin-top:18px;">Company activity</h2>
-    {% if company_recent %}
-      <div class="table">
-        <div class="row head">
-          <div>Employee</div><div>Dates</div><div>Label</div><div>Days</div>
-        </div>
-        {% for r in company_recent %}
-          <div class="row" style="grid-template-columns: 0.9fr 1.2fr 1.3fr 0.6fr;">
-            <div><b>{{ r.employee.get_full_name|default:r.employee.username }}</b></div>
-            <div class="muted">{{ r.start_date }} → {{ r.end_date }}</div>
-            <div class="muted">{{ r.leave_label }}</div>
-            <div><span class="pill">{{ r.requested_units }}d</span></div>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <p class="muted">No leave activity yet.</p>
-    {% endif %}
+    <h2>My Recent Leaves</h2>
+    {% for r in my_recent %}
+      <p>{{ r.start_date }} → {{ r.end_date }} · {{ r.requested_units }} day(s) · {{ r.get_status_display }}</p>
+    {% empty %}<p class="muted">No leaves yet.</p>{% endfor %}
   </section>
 </div>
 {% endblock %}

@@ -60,7 +60,7 @@ def _normalize_origin(origin: str) -> str:
 SECRET_KEY = _env("SECRET_KEY", "dev-secret-key-change-me")
 # Make the project runnable out-of-the-box for local development.
 # In production, set DEBUG=0 in your environment.
-DEBUG = _truthy(_env("DEBUG", "1"))
+DEBUG = _truthy(_env("DEBUG", "0"))
 
 ALLOWED_HOSTS = [_normalize_host(h) for h in _env_csv("ALLOWED_HOSTS", "127.0.0.1,localhost")]
 ALLOWED_HOSTS = [h for h in ALLOWED_HOSTS if h]
@@ -238,3 +238,6 @@ RESEND_API_KEY = _env("RESEND_API_KEY", "")
 RESEND_API_URL = _env("RESEND_API_URL", "https://api.resend.com/emails")
 
 MANAGER_EMAILS = [e.strip().lower() for e in _env("MANAGER_EMAILS", "").split(",") if e.strip()]
+
+EMAIL_NOTIFY_ON_LEAVE = _truthy(_env("EMAIL_NOTIFY_ON_LEAVE", "0"))
+HR_NOTIFICATION_EMAILS = [e.strip() for e in _env("HR_NOTIFICATION_EMAILS", "").split(",") if e.strip()]
