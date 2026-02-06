@@ -31,7 +31,7 @@ class UsernameLoginForm(forms.Form):
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = EmployeeProfile
-        fields = ["phone_number", "current_project", "current_tasks"]
+        fields = ["photo", "phone_number", "current_project", "current_tasks"]
         widgets = {
             "phone_number": forms.TextInput(attrs={"placeholder": "Phone number"}),
             "current_project": forms.TextInput(attrs={"placeholder": "What project are you currently working on?"}),

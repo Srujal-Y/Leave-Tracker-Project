@@ -5,88 +5,71 @@
   <div class="header">
     <div>
       <h1>Company Leave Board</h1>
-      <p class="muted">Everyone can see who is out, when, and why. Click a card to expand details.</p>
+      <p class="muted">Track all leave requests with filters, status, and quick actions.</p>
     </div>
     <div class="actions">
       <a class="btn" href="{% url 'leave:apply_leave' %}">Apply Leave</a>
-      <a class="btn ghost" href="{% url 'portal:me_dashboard' %}">Dashboard</a>
+      <a class="btn ghost" href="{% url 'leave:calendar_view' %}">Calendar</a>
+      <a class="btn ghost" href="{% url 'leave:export_csv' %}">Export CSV</a>
+      {% if can_admin_leave %}<a class="btn ghost" href="{% url 'leave:leave_settings' %}">Leave Settings</a>{% endif %}
     </div>
   </div>
 
   <form class="searchbar" method="get">
-    <label class="sr-only" for="q">Search</label>
-    <input id="q" name="q" value="{{ q }}" placeholder="Search name, label, type, reason…" />
-    <button class="btn ghost" type="submit">Filter</button>
+    <input name="q" value="{{ q }}" placeholder="Search by name, email, reason..." />
+    {{ filter_form.employee }} {{ filter_form.leave_type }} {{ filter_form.month }} {{ filter_form.portion }} {{ filter_form.status }}
+    <button class="btn ghost" type="submit">Apply Filters</button>
+  </form>
+
+
+  <form class="searchbar" method="get" action="{% url 'leave:export_csv' %}">
+    <input type="date" name="start" />
+    <input type="date" name="end" />
+    <button class="btn ghost" type="submit">Export CSV (Date Range)</button>
   </form>
 
   <div class="kanban">
     {% for lr in leaves %}
-      <details class="leave-card">
+      <details class="leave-card {% if highlight == lr.pk|stringformat:'s' %}highlight{% endif %}">
         <summary class="employee-card">
           <div class="emp-left">
-            {% if lr.profile and lr.profile.photo %}
-              <img class="avatar" src="{{ lr.profile.photo.url }}" alt="Profile photo">
-            {% else %}
-              <div class="avatar placeholder" aria-hidden="true"></div>
-            {% endif %}
             <div class="emp-meta">
               <div class="emp-name">{{ lr.employee.get_full_name|default:lr.employee.username }}</div>
-              <div class="emp-sub">{{ lr.employee.email|default:"—" }}</div>
-              <div class="emp-sub">Phone Number: {{ lr.profile.phone_number|default:"—" }}</div>
+              <div class="emp-sub">{{ lr.start_date }} → {{ lr.end_date }} · {{ lr.leave_type.name|default:"General" }} · {{ lr.requested_units }} days</div>
             </div>
           </div>
-
           <div class="emp-right">
-            <div class="badge">
-              <div class="badge-k">Leaves taken</div>
-              <div class="badge-v">{{ lr.emp_total_units|default:"0" }}</div>
-              <div class="badge-s">days</div>
-            </div>
+            {% if lr.status == 'PENDING' %}<span class="pill pending">Authentication Waiting</span>{% endif %}
+            {% if lr.status == 'AUTHENTICATED' %}<span class="pill approved">Authenticated</span>{% endif %}
+            {% if lr.status == 'CANCELLED' %}<span class="pill rejected">Cancelled</span>{% endif %}
           </div>
         </summary>
-
         <div class="leave-details">
-          <div class="kv">
-            <div class="k">From</div>
-            <div class="v">{{ lr.start_date }}</div>
-          </div>
-          <div class="kv">
-            <div class="k">To</div>
-            <div class="v">{{ lr.end_date }}</div>
-          </div>
-          <div class="kv">
-            <div class="k">Days</div>
-            <div class="v">{{ lr.duration_days }}</div>
-          </div>
-          <div class="kv">
-            <div class="k">Portion</div>
-            <div class="v">{{ lr.get_portion_display }}</div>
-          </div>
-          <div class="kv">
-            <div class="k">Type</div>
-            <div class="v">{% if lr.leave_type %}{{ lr.leave_type.name }}{% else %}—{% endif %}</div>
-          </div>
-          <div class="kv">
-            <div class="k">Label</div>
-            <div class="v">{{ lr.leave_label }}</div>
-          </div>
-          <div class="kv wide">
-            <div class="k">Reason</div>
-            <div class="v">{{ lr.reason_text|default:"—" }}</div>
-          </div>
-
-          <div class="detail-actions">
-            <a class="btn tiny ghost" href="{% url 'leave:leave_detail' lr.pk %}">Open full view</a>
+          <div class="kv"><div class="k">Reason</div><div class="v">{{ lr.reason_text|default:'—' }}</div></div>
+          <div class="kv"><div class="k">Portion</div><div class="v">{{ lr.get_portion_display }}</div></div>
+          <div class="kv"><div class="k">Created</div><div class="v">{{ lr.created_at }}</div></div>
+          <div class="kv"><div class="k">Employee</div><div class="v">{{ lr.employee.email }}</div></div>
+          <div class="detail-actions actions">
+            <a class="btn tiny ghost" href="{% url 'leave:leave_detail' lr.pk %}">Open</a>
+            {% if lr.can_edit %}<a class="btn tiny ghost" href="{% url 'leave:edit_leave' lr.pk %}">Edit</a>{% endif %}
+            {% if can_admin_leave and lr.status == 'PENDING' %}
+              <form method="post" action="{% url 'leave:leave_detail' lr.pk %}">{% csrf_token %}<input type="hidden" name="action" value="authenticate"><button class="btn tiny" type="submit">Authenticate</button></form>
+            {% endif %}
+            {% if can_admin_leave and lr.status != 'CANCELLED' %}
+              <form method="post" action="{% url 'leave:leave_detail' lr.pk %}">{% csrf_token %}<input type="hidden" name="action" value="cancel"><button class="btn tiny danger" type="submit">Delete</button></form>
+            {% endif %}
           </div>
         </div>
       </details>
     {% empty %}
-      <div class="empty">
-        <div class="empty-title">No leaves found</div>
-        <div class="muted">Try clearing the search query or create a new leave request.</div>
-        <div style="margin-top:12px"><a class="btn" href="{% url 'leave:apply_leave' %}">Apply Leave</a></div>
-      </div>
+      <div class="empty"><div class="empty-title">No leaves found</div><p class="muted">Try different filters or create a new leave request.</p><a class="btn" href="{% url 'leave:apply_leave' %}">Create Leave Request</a></div>
     {% endfor %}
+  </div>
+
+  <div class="actions" style="margin-top:12px;">
+    {% if page_obj.has_previous %}<a class="btn ghost" href="?q={{ q|urlencode }}&employee={{ filter_form.employee.value|default_if_none:""|urlencode }}&leave_type={{ filter_form.leave_type.value|default_if_none:""|urlencode }}&month={{ filter_form.month.value|default_if_none:""|urlencode }}&portion={{ filter_form.portion.value|default_if_none:""|urlencode }}&status={{ filter_form.status.value|default_if_none:""|urlencode }}&page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
+    <span class="muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a class="btn ghost" href="?q={{ q|urlencode }}&employee={{ filter_form.employee.value|default_if_none:""|urlencode }}&leave_type={{ filter_form.leave_type.value|default_if_none:""|urlencode }}&month={{ filter_form.month.value|default_if_none:""|urlencode }}&portion={{ filter_form.portion.value|default_if_none:""|urlencode }}&status={{ filter_form.status.value|default_if_none:""|urlencode }}&page={{ page_obj.next_page_number }}">Load More</a>{% endif %}
   </div>
 </div>
 {% endblock %}

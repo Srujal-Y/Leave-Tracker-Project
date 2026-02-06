@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
+from portal.views import health_check
 from django.conf import settings
 from django.conf.urls.static import static
 import os
@@ -17,6 +18,7 @@ def _truthy_env(name: str, default: str = "0") -> bool:
 
 
 urlpatterns = [
+    path("health/", health_check),
     path("admin/", admin.site.urls),
     path("", include("portal.urls")),
     path("leave/", include("leave.urls")),

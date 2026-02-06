@@ -1,32 +1,20 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="centerwrap">
-  <div class="card formcard">
-    <div class="row">
-      {% if r.employee.employee_profile.photo %}
-        <img class="avatar lg" src="{{ r.employee.employee_profile.photo.url }}" alt="" />
-      {% else %}
-        <div class="avatar lg placeholder"></div>
-      {% endif %}
-      <div>
-        <h2 class="m0">{{ r.employee.get_full_name|default:r.employee.username }}</h2>
-        <div class="muted">{{ r.employee.email|default:"" }}</div>
-        {% if r.employee.employee_profile.current_project %}
-          <div class="pill mt">Project: {{ r.employee.employee_profile.current_project }}</div>
-        {% endif %}
-      </div>
-    </div>
+<section class="card">
+  <h1>Leave Request #{{ r.pk }}</h1>
+  <p><b>{{ r.employee.get_full_name|default:r.employee.username }}</b> · {{ r.start_date }} → {{ r.end_date }}</p>
+  <p>Status: {% if r.status == 'PENDING' %}<span class="pill pending">Authentication Waiting</span>{% elif r.status == 'AUTHENTICATED' %}<span class="pill approved">Authenticated</span>{% else %}<span class="pill rejected">Cancelled</span>{% endif %}</p>
+  <p>Type: {{ r.leave_type.name|default:"General" }} | Portion: {{ r.get_portion_display }} | Units: {{ r.requested_units }}</p>
+  <p>Reason: {{ r.reason_text|default:"—" }}</p>
 
-    <div class="kv mt2">
-      <div class="k">From</div><div class="v">{{ r.start_date }}</div>
-      <div class="k">To</div><div class="v">{{ r.end_date }}</div>
-      <div class="k">Calendar days</div><div class="v">{{ r.duration_days }}</div>
-      <div class="k">Portion</div><div class="v">{{ r.get_portion_display }}</div>
-      <div class="k">Requested days</div><div class="v">{{ r.requested_units }}</div>
-      <div class="k">Leave type</div><div class="v">{{ r.leave_type.name|default:"—" }}</div>
-      <div class="k">Label</div><div class="v">{{ r.leave_label|default:"—" }}</div>
-      <div class="k">Reason</div><div class="v">{{ r.display_reason }}</div>
-    </div>
+  <div class="actions">
+    {% if can_edit %}<a class="btn ghost" href="{% url 'leave:edit_leave' r.pk %}">Edit</a>{% endif %}
+    {% if can_admin_leave and r.status == 'PENDING' %}
+      <form method="post">{% csrf_token %}<input type="hidden" name="action" value="authenticate"><button class="btn" type="submit">Authenticate</button></form>
+    {% endif %}
+    {% if can_edit and r.status != 'CANCELLED' %}
+      <form method="post">{% csrf_token %}<input type="hidden" name="action" value="cancel"><button class="btn danger" type="submit">Delete / Cancel</button></form>
+    {% endif %}
   </div>
 </section>
 {% endblock %}
