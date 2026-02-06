@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h1>Calendar View</h1>
+  <div class="actions">
+    <a class="btn ghost" href="?mode=month&month={{ current|date:'Y-m' }}">Monthly</a>
+    <a class="btn ghost" href="?mode=week">Weekly</a>
+  </div>
+
+  {% if mode == 'month' %}
+    <table class="table" style="display:table;width:100%;border-collapse:collapse;margin-top:12px;">
+      <thead>
+        <tr>
+          <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for week in month_grid %}
+          <tr>
+            {% for cell in week %}
+              <td style="padding:10px;border:1px solid rgba(255,255,255,.1);vertical-align:top;{% if not cell.in_month %}opacity:.4{% endif %}">
+                <a href="?mode=month&month={{ current|date:'Y-m' }}&day={{ cell.iso }}"><b>{{ cell.day|date:"j" }}</b></a>
+                {% if cell.count %}<div class="pill" style="margin-top:6px;">{{ cell.count }} off</div>{% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="grid" style="grid-template-columns:repeat(7,minmax(0,1fr));margin-top:12px;">
+      {% for cell in week_cells %}
+        <div class="card subtle">
+          <a href="?mode=week&day={{ cell.iso }}"><b>{{ cell.day|date:"D d" }}</b></a>
+          <div class="muted">{{ cell.count }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if selected_day %}
+    <h2 style="margin-top:14px;">Leave entries on {{ selected_day }}</h2>
+    {% for item in selected_day_items %}
+      <p>{{ item.employee.get_full_name|default:item.employee.username }} · {{ item.leave_label }} · {{ item.get_status_display }}</p>
+    {% empty %}
+      <p class="muted">No entries for this day.</p>
+    {% endfor %}
+  {% endif %}
+</section>
+{% endblock %}

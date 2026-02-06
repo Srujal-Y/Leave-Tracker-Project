@@ -60,7 +60,7 @@ def _normalize_origin(origin: str) -> str:
 SECRET_KEY = _env("SECRET_KEY", "dev-secret-key-change-me")
 # Make the project runnable out-of-the-box for local development.
 # In production, set DEBUG=0 in your environment.
-DEBUG = _truthy(_env("DEBUG", "1"))
+DEBUG = _truthy(_env("DEBUG", "0"))
 
 ALLOWED_HOSTS = [_normalize_host(h) for h in _env_csv("ALLOWED_HOSTS", "127.0.0.1,localhost")]
 ALLOWED_HOSTS = [h for h in ALLOWED_HOSTS if h]
@@ -188,33 +188,39 @@ AWS_S3_SIGNATURE_VERSION = _env("AWS_S3_SIGNATURE_VERSION", "s3v4")
 
 if AWS_STORAGE_BUCKET_NAME and AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY:
     # Only enable S3 storage when all required settings are present.
-    INSTALLED_APPS += ["storages"]
-    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
-    AWS_QUERYSTRING_AUTH = False
-    AWS_DEFAULT_ACL = None
-    AWS_S3_FILE_OVERWRITE = False
-    AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
-    if AWS_S3_ENDPOINT_URL:
-        AWS_S3_ENDPOINT_URL = AWS_S3_ENDPOINT_URL.rstrip("/")
-    if AWS_S3_ADDRESSING_STYLE:
-        AWS_S3_ADDRESSING_STYLE = AWS_S3_ADDRESSING_STYLE.strip().lower()
-    if AWS_S3_SIGNATURE_VERSION:
-        AWS_S3_SIGNATURE_VERSION = AWS_S3_SIGNATURE_VERSION.strip()
-
-    if AWS_S3_CUSTOM_DOMAIN:
-        MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
-    elif AWS_S3_ENDPOINT_URL:
-        if AWS_S3_ADDRESSING_STYLE == "virtual":
-            host = AWS_S3_ENDPOINT_URL.replace("https://", "").replace("http://", "")
-            MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.{host}/"
-        else:
-            MEDIA_URL = f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/"
+    try:
+        import storages  # type: ignore  # noqa: F401
+    except Exception as e:  # pragma: no cover
+        print("WARNING: AWS_* vars are set but django-storages is unavailable:", e)
     else:
-        # Default public bucket URL.
-        if AWS_S3_REGION_NAME:
-            MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/"
+        INSTALLED_APPS += ["storages"]
+        DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+        AWS_QUERYSTRING_AUTH = False
+        AWS_DEFAULT_ACL = None
+        AWS_S3_FILE_OVERWRITE = False
+        AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
+
+        if AWS_S3_ENDPOINT_URL:
+            AWS_S3_ENDPOINT_URL = AWS_S3_ENDPOINT_URL.rstrip("/")
+        if AWS_S3_ADDRESSING_STYLE:
+            AWS_S3_ADDRESSING_STYLE = AWS_S3_ADDRESSING_STYLE.strip().lower()
+        if AWS_S3_SIGNATURE_VERSION:
+            AWS_S3_SIGNATURE_VERSION = AWS_S3_SIGNATURE_VERSION.strip()
+
+        if AWS_S3_CUSTOM_DOMAIN:
+            MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
+        elif AWS_S3_ENDPOINT_URL:
+            if AWS_S3_ADDRESSING_STYLE == "virtual":
+                host = AWS_S3_ENDPOINT_URL.replace("https://", "").replace("http://", "")
+                MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.{host}/"
+            else:
+                MEDIA_URL = f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/"
         else:
-            MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/"
+            # Default public bucket URL.
+            if AWS_S3_REGION_NAME:
+                MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/"
+            else:
+                MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -238,3 +244,6 @@ RESEND_API_KEY = _env("RESEND_API_KEY", "")
 RESEND_API_URL = _env("RESEND_API_URL", "https://api.resend.com/emails")
 
 MANAGER_EMAILS = [e.strip().lower() for e in _env("MANAGER_EMAILS", "").split(",") if e.strip()]
+
+EMAIL_NOTIFY_ON_LEAVE = _truthy(_env("EMAIL_NOTIFY_ON_LEAVE", "0"))
+HR_NOTIFICATION_EMAILS = [e.strip() for e in _env("HR_NOTIFICATION_EMAILS", "").split(",") if e.strip()]
