@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Company Leaves{% endblock %}
+{% block content %}
+<div class="page">
+  <div class="header">
+    <div>
+      <h1>Company Leave Board</h1>
+      <p class="muted">Everyone can see who is out, when, and why. Click a card to expand details.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="{% url 'leave:apply_leave' %}">Apply Leave</a>
+      <a class="btn ghost" href="{% url 'portal:me_dashboard' %}">Dashboard</a>
+    </div>
+  </div>
+
+  <form class="searchbar" method="get">
+    <label class="sr-only" for="q">Search</label>
+    <input id="q" name="q" value="{{ q }}" placeholder="Search name, label, type, reason…" />
+    <button class="btn ghost" type="submit">Filter</button>
+  </form>
+
+  <div class="kanban">
+    {% for lr in leaves %}
+      <details class="leave-card">
+        <summary class="employee-card">
+          <div class="emp-left">
+            {% if lr.profile and lr.profile.photo %}
+              <img class="avatar" src="{{ lr.profile.photo.url }}" alt="Profile photo">
+            {% else %}
+              <div class="avatar placeholder" aria-hidden="true"></div>
+            {% endif %}
+            <div class="emp-meta">
+              <div class="emp-name">{{ lr.employee.get_full_name|default:lr.employee.username }}</div>
+              <div class="emp-sub">{{ lr.employee.email|default:"—" }}</div>
+              <div class="emp-sub">Phone Number: {{ lr.profile.phone_number|default:"—" }}</div>
+            </div>
+          </div>
+
+          <div class="emp-right">
+            <div class="badge">
+              <div class="badge-k">Leaves taken</div>
+              <div class="badge-v">{{ lr.emp_total_units|default:"0" }}</div>
+              <div class="badge-s">days</div>
+            </div>
+          </div>
+        </summary>
+
+        <div class="leave-details">
+          <div class="kv">
+            <div class="k">From</div>
+            <div class="v">{{ lr.start_date }}</div>
+          </div>
+          <div class="kv">
+            <div class="k">To</div>
+            <div class="v">{{ lr.end_date }}</div>
+          </div>
+          <div class="kv">
+            <div class="k">Days</div>
+            <div class="v">{{ lr.duration_days }}</div>
+          </div>
+          <div class="kv">
+            <div class="k">Portion</div>
+            <div class="v">{{ lr.get_portion_display }}</div>
+          </div>
+          <div class="kv">
+            <div class="k">Type</div>
+            <div class="v">{% if lr.leave_type %}{{ lr.leave_type.name }}{% else %}—{% endif %}</div>
+          </div>
+          <div class="kv">
+            <div class="k">Label</div>
+            <div class="v">{{ lr.leave_label }}</div>
+          </div>
+          <div class="kv wide">
+            <div class="k">Reason</div>
+            <div class="v">{{ lr.reason_text|default:"—" }}</div>
+          </div>
+
+          <div class="detail-actions">
+            <a class="btn tiny ghost" href="{% url 'leave:leave_detail' lr.pk %}">Open full view</a>
+          </div>
+        </div>
+      </details>
+    {% empty %}
+      <div class="empty">
+        <div class="empty-title">No leaves found</div>
+        <div class="muted">Try clearing the search query or create a new leave request.</div>
+        <div style="margin-top:12px"><a class="btn" href="{% url 'leave:apply_leave' %}">Apply Leave</a></div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+Django>=5.2,<6.0
+python-dotenv>=1.0
+Pillow>=10.0
+
+# Static files (production-ready; also OK in dev)
+whitenoise>=6.6
+
+# DATABASE_URL parsing (Neon/Postgres deployments)
+dj-database-url>=2.2
+
+# Postgres driver (Neon)
+psycopg[binary]>=3.2
+
+# WSGI server (Railway/production)
+gunicorn>=21.2
+
+# Optional: S3 media storage (recommended for production profile photos)
+django-storages[boto3]>=1.14
+boto3>=1.34

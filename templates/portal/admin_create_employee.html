@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="centerwrap">
+  <section class="card formcard">
+    <h1>Add employee</h1>
+    <p class="muted">Creates an employee account (email is used as username). The employee will set their password via OTP.</p>
+
+    <form method="post" class="form">
+      {% csrf_token %}
+      <div class="field">
+        <label>Email</label>
+        {{ form.email }}
+      </div>
+      <div class="gridcols2">
+        <div class="field">
+          <label>First name</label>
+          {{ form.first_name }}
+        </div>
+        <div class="field">
+          <label>Last name</label>
+          {{ form.last_name }}
+        </div>
+      </div>
+      <div class="formactions">
+        <button class="btn" type="submit">Create employee</button>
+        <a class="btn ghost" href="{% url 'portal:admin_panel' %}">Back</a>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
+

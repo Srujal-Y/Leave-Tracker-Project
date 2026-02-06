@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="centerwrap">
+  <section class="card formcard">
+    <h1>Login</h1>
+    <p class="muted">Use your company email (as username) and password.</p>
+    <form method="post" class="form">
+      {% csrf_token %}
+      <div class="field">
+        <label>Email</label>
+        {{ form.username }}
+      </div>
+      <div class="field">
+        <label>Password</label>
+        {{ form.password }}
+      </div>
+      <button class="btn" type="submit">Sign in</button>
+      <a class="btn ghost" href="{% url 'portal:password_reset' %}">Forgot password?</a>
+    </form>
+  </section>
+</div>
+{% endblock %}

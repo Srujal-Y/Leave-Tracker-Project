@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="centerwrap">
+  <section class="card formcard">
+    <h1>Delete user</h1>
+    <p class="muted">
+      You are about to permanently delete <b>{{ u.username }}</b>.
+      This may also delete related leave records (depending on DB constraints).
+      Consider disabling the user instead.
+    </p>
+
+    <form method="post" class="form">
+      {% csrf_token %}
+      <div class="actions">
+        <button class="btn danger" type="submit">Yes, delete</button>
+        <a class="btn ghost" href="{% url 'portal:admin_panel' %}">Cancel</a>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
+

@@ -1,0 +1,30 @@
+<div class="leavecard" data-leave-card
+     data-employee="{{ l.employee.username|escape }}"
+     data-daterange="{{ l.start_date }} → {{ l.end_date }}"
+     data-from="{{ l.start_date }}"
+     data-to="{{ l.end_date }}"
+     data-days="{{ l.duration_days }}"
+     data-units="{{ l.requested_units }}"
+     data-portion="{{ l.get_portion_display|escape }}"
+     data-type="{% if l.leave_type %}{{ l.leave_type.name|escape }}{% else %}—{% endif %}"
+     data-label="{{ l.leave_label|escape }}"
+     data-reason="{{ l.reason_text|linebreaksbr|striptags|escape }}">
+
+  <div class="leavecard-top">
+    <div class="avatar" aria-hidden="true">{{ l.employee.username|first|upper }}</div>
+    <div>
+      <div class="leavecard-name">{{ l.employee.username }}</div>
+      <div class="leavecard-sub">{{ l.start_date }} → {{ l.end_date }}</div>
+    </div>
+  </div>
+
+  <div class="leavecard-meta">
+    <span class="pill">{{ l.duration_days }} day(s)</span>
+    <span class="pill">{{ l.get_portion_display }}</span>
+    <span class="pill">{{ l.requested_units }} day(s)</span>
+  </div>
+
+  <div class="leavecard-title">{{ l.leave_label }}</div>
+  <div class="leavecard-note">{% if l.leave_type %}{{ l.leave_type.name }}{% else %}Leave{% endif %} · {{ l.reason_text|default:"—"|truncatechars:80 }}</div>
+
+</div>
