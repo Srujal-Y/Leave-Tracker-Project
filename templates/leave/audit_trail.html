@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card"><h1>Audit Trail</h1>
+<div class="table"><div class="row head"><div>Time</div><div>Actor</div><div>Action</div><div>Entity</div></div>
+{% for e in events %}<div class="row" style="grid-template-columns:1.2fr 1fr 1fr 1fr;"><div>{{ e.created_at }}</div><div>{{ e.actor.username|default:'System' }}</div><div>{{ e.action }}</div><div>{{ e.entity_type }} #{{ e.entity_id }}</div></div>{% endfor %}
+</div></section>
+{% endblock %}

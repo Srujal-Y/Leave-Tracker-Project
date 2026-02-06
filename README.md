@@ -535,3 +535,72 @@ python manage.py changepassword <username>
 ## License / Internal Use
 
 This project is intended for internal company use.
+
+
+## OTP and Media API Integration (Production)
+
+### OTP email API
+You can send OTP using SMTP or Resend. Configure one of the following:
+
+```env
+# SMTP
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=your_gmail_username
+EMAIL_HOST_PASSWORD=your_app_password
+EMAIL_USE_TLS=1
+DEFAULT_FROM_EMAIL=hr@yourcompany.com
+
+# Optional leave notifications
+EMAIL_NOTIFY_ON_LEAVE=1
+HR_NOTIFICATION_EMAILS=hr@yourcompany.com,team@yourcompany.com
+
+# Resend (optional)
+OTP_PROVIDER=resend
+RESEND_API_KEY=re_xxx
+RESEND_API_URL=https://api.resend.com/emails
+```
+
+### Profile photo storage API (S3 / Cloudflare R2)
+```env
+AWS_STORAGE_BUCKET_NAME=your-bucket
+AWS_ACCESS_KEY_ID=xxx
+AWS_SECRET_ACCESS_KEY=xxx
+AWS_S3_REGION_NAME=auto
+AWS_S3_ENDPOINT_URL=https://<accountid>.r2.cloudflarestorage.com
+AWS_S3_ADDRESSING_STYLE=path
+AWS_S3_SIGNATURE_VERSION=s3v4
+```
+
+When these values are set, `django-storages` is enabled automatically and profile photos are served from object storage.
+
+
+## Railway Raw Variable Script (Copy/Paste)
+
+A full ready-to-paste Railway variables template is included at:
+
+- `railway.env.raw.example`
+
+### Railway CLI quick import
+If you use Railway CLI, you can import the same variables by converting this file to your shell env and setting each variable.
+
+Example (macOS/Linux):
+```bash
+set -a
+source railway.env.raw.example
+set +a
+```
+Then configure them in Railway dashboard Raw Editor (or with Railway CLI commands in your workflow).
+
+
+### Railway crash checklist
+If Railway still crashes on startup, verify:
+
+1. `DATABASE_URL` is a **real** connection string (not placeholder text).
+2. If using S3/R2, set valid `AWS_*` values; otherwise leave `AWS_*` unset.
+3. `SECRET_KEY` is set to a real value.
+4. `ALLOWED_HOSTS` includes your Railway/public domain.
+5. Startup command runs migrations (`python manage.py migrate`) before gunicorn.
+
+This project now ignores obvious placeholder values for `DATABASE_URL` and optional `AWS_*` so copy/paste templates do not crash startup.
