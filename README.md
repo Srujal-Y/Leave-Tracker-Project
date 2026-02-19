@@ -1,280 +1,467 @@
-# Leave Tracker
+# Leave Tracker Project
 
-A role-based Leave Management System built with Django 5, focused on:
-- Employee self-service leave application
-- Admin/HR approval-controlled leave lifecycle
-- Leave balances and entitlement tracking
-- Audit visibility and reporting
-- OTP-based password reset
-- A themed "Red Samurai" UI
+Complete project guide for the current codebase. This README is written to cover the project end-to-end: architecture, features, roles, data model, APIs, frontend routes, local setup, deployment, desktop EXE launcher, and troubleshooting.
 
-This README is the full operational guide for the current codebase in this repository.
+## 1) What This Project Is
 
-## 1. Tech Stack
-- Backend: Django 5 (`Django>=5.2,<6.0`)
-- Database: SQLite by default, PostgreSQL via `DATABASE_URL` and `USE_DATABASE_URL=1`
-- Queue (optional): Celery + Redis
-- Email: SMTP (with console fallback if SMTP host not configured)
-- Storage (optional): local media by default, S3/R2 via `django-storages` + `boto3`
-- Frontend (existing): Django templates + Bootstrap 5 + custom CSS theme (`static/css/app.css`)
-- Frontend (new): Next.js + shadcn/ui (`frontend/`)
+Leave Tracker is a multi-organization HR platform with:
 
-## 2. Project Structure
-Key directories and files:
-- `leave_tracker_project/settings.py`: environment-driven settings and app configuration
-- `leave_tracker_project/urls.py`: root URL routing
-- `users/`: custom auth model, OTP reset flow, admin user panel, profile
-- `leaves/`: leave business models, forms, views, signals, seed command
-- `portal/`: dashboard, home redirect, health endpoint
-- `auditlog/`: audit event model and admin registration
-- `templates/`: UI templates
-- `static/css/app.css`: Red Samurai design system
-- `api/`: DRF + JWT API endpoints for shadcn frontend
-- `frontend/`: Next.js + shadcn/ui app
-- `.env.example`: environment template
-- `requirements.txt`: Python dependencies
+- Leave management
+- Talent acquisition
+- Onboarding management
+- Organization directory and hierarchy management
+- Admin user management and password controls
+- Audit logging
+- Advanced architecture modules (workspace, compliance, workflow, control plane)
 
-## 3. Core Functional Coverage
-Implemented features:
-- Custom user model with roles (`Employee`, `Manager`, `HR`)
-- Admin-gated portal login (`can_portal_login`)
-- Email-or-username login
-- OTP password reset (email delivery)
-- Employee profile card (photo, phone, project fields, initiatives)
-- Leave type policies (`max_days`, `is_paid`, `active`)
-- Leave request lifecycle (`Pending`, `Approved`, `Rejected`, `Cancelled`)
-- Supporting document uploads on leave requests (max combined upload size 10 GB per submission)
-- Entitlement and balance by `(user, leave_type, year)`
-- Auto-consume/release balance on status transitions (signals)
-- Working-day calculation excluding weekends + configured holidays
-- Overlap detection and optional team-off threshold warning
-- Company leave board with search + filters + pagination
-- CSV export for company board (Admin/HR)
-- Monthly/weekly calendar and daily drilldown
-- iCal export of approved personal leaves
-- Approval queue and review workflow (Admin/HR)
-- Public holiday management from portal UI (admin-only create/edit/delete)
-- Audit trail UI and model
-- `/health/` endpoint for readiness checks
+This repo provides **three user-facing surfaces**:
 
-## 4. Data Model Design
-Primary models and purpose:
+1. Django server-rendered UI (`/login`, `/dashboard`, `/leave/*`, `/admin-panel/*`)
+2. Next.js + shadcn frontend (`frontend/src/app/*`)
+3. Windows desktop launcher EXE (`LeaveTrackerLauncher.exe`) that starts backend + frontend locally
 
-### `users.User`
-- Extends `AbstractUser`
-- Extra fields:
-  - `role`: `EMPLOYEE | MANAGER | HR`
-  - `manager`: self FK (limited to Manager role)
-  - `can_portal_login`: hard gate for portal access
+## 2) Tech Stack
 
-### `users.EmployeeProfile`
-- One-to-one with `User`
-- Fields:
-  - `photo`
-  - `phone_number`
-  - `current_project`
-  - `project_status`
-  - `initiatives_to_take`
+Backend:
+- Django 5
+- Django REST Framework
+- SimpleJWT (`djangorestframework-simplejwt`)
+- `django-cors-headers`
+- SQLite (default), PostgreSQL (`DATABASE_URL`)
 
-### `users.PasswordResetOTP`
-- One-time password reset entity
-- Fields:
-  - `token` (UUID)
-  - `code` (6 digits)
-  - `expires_at`
-  - `used_at`
+Frontend:
+- Next.js 16 (App Router)
+- React 19
+- shadcn/ui + Tailwind
+- Sonner toasts + Lucide icons
 
-### `leaves.LeaveType`
-- Leave policy master
-- Fields:
-  - `name`
-  - `max_days`
-  - `is_paid`
-  - `active`
+Optional infra:
+- Celery + Redis
+- S3/R2 file storage via `django-storages` + `boto3`
 
-### `leaves.LeaveReasonPreset`
-- Controlled leave reason options
-- Fields:
-  - `label`
-  - `active`
+Desktop:
+- PyInstaller for `LeaveTrackerLauncher.exe`
 
-### `leaves.Holiday`
-- Holiday calendar table used in business-day calculation
-- Fields:
-  - `name`
-  - `date` (unique)
+## 3) Repository Structure
 
-### `leaves.LeaveAttachment`
-- Stores uploaded files linked to a leave request
-- Fields:
-  - `leave_request`
-  - `file`
-  - `original_name`
-  - `size_bytes`
-  - `uploaded_by`
-  - `uploaded_at`
+Top-level app directories:
 
-### `leaves.LeaveBalance`
-- Entitlement ledger per `(user, leave_type, year)`
-- Fields:
-  - `allocated_days`
-  - `used_days`
-  - computed `remaining_days`
+- `leave_tracker_project/` Django settings, URL root, ASGI/WSGI, Celery bootstrap
+- `users/` custom user model, admin account model, profile, OTP reset, auth views/forms
+- `organization/` company and tenant models, org directory structure, context resolution, tenancy helpers
+- `leaves/` leave/talent/onboarding models, forms, workflows, signals, data bootstrap command
+- `api/` REST API endpoints and serializers used by frontend
+- `portal/` dashboard/home/health views for Django template flow
+- `auditlog/` core audit event model
+- `architecture/` advanced architecture/compliance/workflow/control-plane entities + APIs
+- `frontend/` Next.js application
+- `desktop_app/` launcher source and logs
+- `docs/` architecture docs, diagrams, DBML artifacts
 
-### `leaves.LeaveRequest`
-- Main workflow object
-- Fields:
-  - `employee` FK
-  - `leave_type` FK
-  - `start_date`, `end_date`
-  - `portion`: `FULL | HALF | QUARTER`
-  - `requested_units`
-  - `status`: `PENDING | APPROVED | REJECTED | CANCELLED`
-  - `approver`, `manager_note`
-  - lifecycle timestamps
-  - `is_deleted` soft-state flag
+Important root files:
 
-### `auditlog.AuditEvent`
-- Tracks key leave actions with actor and metadata
+- `manage.py`
+- `requirements.txt`
+- `Procfile`
+- `LeaveTrackerLauncher.spec`
+- `LeaveTrackerLauncher.exe`
+- `.env.example`
 
-## 5. Signals and Automation
-Signal behavior:
-- `users.signals.ensure_profile`:
-  - Creates/ensures `EmployeeProfile` whenever a `User` is saved
-- `leaves.signals.create_initial_leave_balances`:
-  - On user creation, creates leave balances for all active leave types (current year)
-- `leaves.signals.create_leave_type_balances_for_all_users`:
-  - On leave type create/update, seeds/updates user balances
-- `leaves.signals.maintain_balance_on_status_change`:
-  - Auto-consumes balance when request moves to `APPROVED`
-  - Releases balance when leaving `APPROVED`
+## 4) Core Product Features
 
-## 6. Role and Access Matrix
-- Employee:
-  - Login (if `can_portal_login=True`)
-  - Apply/edit/cancel own leave requests (edit/cancel only while pending)
-  - View dashboard, company board, calendar, own iCal
-  - Edit own profile
-- Manager:
-  - Employee capabilities
-  - Plus can be assignment target as `manager`
-- HR/Admin (`is_staff` or `is_superuser` or role `HR`):
-  - Approval queue and review actions
-  - Manage leave policies (types and reason presets)
-  - Admin user panel (create/disable/delete users)
-  - Audit trail view
-  - CSV export
+### 4.1 Leave Module
 
-## 7. URL Map
-Main routes:
-- `/login/`: login page
-- `/logout/`: logout
-- `/password-reset/`: OTP request
-- `/password-reset/verify/<uuid:token>/`: OTP verification + password set
-- `/dashboard/`: employee dashboard
-- `/health/`: health endpoint
-- `/profile/edit/`: employee profile edit
-- `/admin-panel/`: user admin panel
-- `/leave/apply/`: create leave request
-- `/leave/apply/<id>/edit/`: edit leave request
-- `/leave/apply/<id>/cancel/`: cancel leave request
-- `/leave/company/`: company board
-- `/leave/company/export.csv`: CSV export
-- `/leave/calendar/`: month/week calendar
-- `/leave/approvals/`: approval queue
-- `/leave/approvals/<id>/`: approve/reject detail
-- `/leave/policies/`: leave policy management
-- `/leave/policies/holidays/new/`: add holiday (admin only)
-- `/leave/policies/holidays/<id>/edit/`: edit holiday (admin only)
-- `/leave/policies/holidays/<id>/delete/`: delete holiday (admin only)
-- `/leave/audit-trail/`: audit events
-- `/leave/ical/`: personal approved leave iCal export
-- `/leave/<id>/`: leave detail
-- `/api/*`: REST API for Next.js/shadcn frontend
+- Leave type policies per company
+- Leave reason presets per company
+- Holiday calendar per company
+- Apply/edit/cancel leave
+- Approval queue for HR/Admin
+- Leave balance calculation by year
+- Automatic consume/release of balance on approval status changes
+- CSV export
+- iCal export
+- Team calendar with month/week modes
+- Supporting document uploads
 
-### API Highlights
+### 4.2 Talent & Onboarding
+
+- Candidate pipeline (`APPLIED`, `SCREENING`, `INTERVIEW`, `OFFER`, `HIRED`, `REJECTED`)
+- Onboarding task tracking with categories (`HR`, `IT`, `FACILITIES`, `GENERAL`)
+- Dynamic form fields (per company/module and optionally per org unit/location)
+- Company-scoped ownership and access controls
+
+### 4.3 Organization Workspace
+
+- Company list and active organization context
+- Organization + tenant creation (platform admin)
+- Org units, locations, cost centers, job levels, positions
+- Employee records and manager relationships
+- Reporting tree and direct/indirect reporting APIs
+- HR scope controls by org unit/location
+
+### 4.4 Admin & Access
+
+- Create users with role and company assignment
+- Set tracker access (`MAIN`, `ORGANIZATION`, `BOTH`)
+- Admin account levels (`PLATFORM`, `ORGANIZATION`)
+- Admin password set/reset endpoint for managed users
+- OTP password reset flow for users
+
+### 4.5 Architecture Module
+
+Under `/api/architecture/*` and `/architecture` UI:
+
+- Workspace: threads/comments/mentions/presence
+- Compliance: IdP identities, MFA factors, RBAC models, session tokens, immutable audit events
+- Workflow: rules, instances, step runs, job queue, notification outbox
+- Control: tenant DB connections, tenant provision jobs, tenant schema migrations
+
+## 5) User Model, Roles, And Access Rules
+
+`users.User` adds:
+
+- `role`: `EMPLOYEE | MANAGER | HR`
+- `organization`: FK to `organization.Company`
+- `manager`: self-reference
+- `created_by`, `created_in_organization`
+- `portal_access`: `MAIN | ORGANIZATION | BOTH`
+
+`users.AdminAccount` controls admin scope:
+
+- `level`: `PLATFORM` or `ORGANIZATION`
+- `organization` (required for organization-level admin)
+- `can_manage_users`
+- `can_manage_organizations`
+
+Access enforcement:
+
+- API permissions in `api/permissions.py`
+- Core checks in `users/permissions.py`
+- Context-based scoping in `organization/context.py`
+- Per-request org middleware in `organization/middleware.py`
+
+## 6) Multi-Organization/Tenancy Model
+
+Current default model:
+
+- Shared-schema multi-organization architecture
+- Data isolation by company IDs + access checks + context resolution
+
+Organization core models:
+
+- `Company`
+- `OrganizationDirectory`
+- `OrganizationTenant`
+- `OrgUnit`
+- `Location`
+- `CostCenter`
+- `JobLevel`
+- `Position`
+- `EmployeeRecord`
+- `ManagerRelationship`
+- `OrgAccessScope`
+- `IntegrationEvent`
+- `OrganizationFormField`
+
+Request context flow:
+
+1. Frontend sends `X-Company-Id` and `X-DTS-SCHEMA`
+2. `OrganizationContextMiddleware` resolves/validates active company
+3. APIs scope queries to company
+4. Optional strict mode can enforce explicit context
+
+Optional PostgreSQL schema tenancy support:
+
+- `ENABLE_POSTGRES_SCHEMA_TENANCY=1`
+- `TENANCY_AUTO_CREATE_SCHEMA=1` (optional auto-create)
+- Search path switching handled in `organization/tenancy.py`
+
+## 7) Data Model Summary By App
+
+### users
+
+- `User`
+- `AdminAccount`
+- `EmployeeProfile`
+- `PasswordResetOTP`
+
+### leaves
+
+- `LeaveType`
+- `LeaveReasonPreset`
+- `Holiday`
+- `LeaveBalance`
+- `LeaveRequest`
+- `LeaveAttachment`
+- `TalentCandidate`
+- `TalentCandidateCustomFieldValue`
+- `OnboardingTask`
+- `OnboardingTaskCustomFieldValue`
+
+### organization
+
+- `Company`
+- `OrganizationDirectory`
+- `OrganizationTenant`
+- `OrgUnit`
+- `Location`
+- `CostCenter`
+- `JobLevel`
+- `Position`
+- `EmployeeRecord`
+- `ManagerRelationship`
+- `OrgAccessScope`
+- `IntegrationEvent`
+- `OrganizationFormField`
+
+### architecture
+
+- `WorkspaceThread`
+- `WorkspaceComment`
+- `WorkspaceMention`
+- `WorkspacePresence`
+- `IdpIdentity`
+- `MfaFactor`
+- `AccessRole`
+- `AccessPermission`
+- `RolePermission`
+- `UserRoleBinding`
+- `SessionToken`
+- `ImmutableAuditEvent`
+- `WorkflowRule`
+- `WorkflowInstance`
+- `WorkflowStepRun`
+- `JobQueueEntry`
+- `NotificationOutbox`
+- `TenantConnection`
+- `TenantProvisionJob`
+- `TenantSchemaMigration`
+
+### auditlog
+
+- `AuditEvent`
+
+## 8) URL Routing
+
+Root routes (`leave_tracker_project/urls.py`):
+
+- `/admin/` Django admin
+- `/api/` REST APIs (`api.urls`)
+- `/api/architecture/` architecture APIs
+- template routes from `portal.urls`, `users.urls`, `leaves.urls`
+
+Template routes:
+
+- `/login/`
+- `/logout/`
+- `/password-reset/`
+- `/password-reset/verify/<uuid:token>/`
+- `/dashboard/`
+- `/health/`
+- `/profile/edit/`
+- `/admin-panel/`
+- `/admin-panel/create/`
+- `/admin-panel/<id>/toggle/`
+- `/admin-panel/<id>/delete/`
+- `/leave/*`
+
+## 9) API Endpoint Map
+
+Auth:
+
 - `POST /api/auth/login/`
+- `POST /api/auth/password-reset/`
+- `POST /api/auth/password-reset/verify/<uuid:token>/`
 - `POST /api/auth/refresh/`
 - `GET /api/auth/me/`
+
+Profile + dashboard:
+
 - `GET /api/dashboard/summary/`
+- `PATCH /api/profile/`
+
+Leave:
+
 - `GET /api/leave/types/`
+- `PATCH/DELETE /api/leave/types/<id>/`
+- `GET /api/leave/reasons/`
+- `PATCH/DELETE /api/leave/reasons/<id>/`
 - `GET/POST /api/leave/requests/`
-- `GET /api/leave/requests/<id>/`
+- `GET/PATCH/DELETE /api/leave/requests/<id>/`
 - `POST /api/leave/requests/<id>/review/`
-- `GET/POST /api/leave/holidays/` (POST admin only)
-- `PATCH/DELETE /api/leave/holidays/<id>/` (admin only)
+- `GET/POST /api/leave/holidays/`
+- `PATCH/DELETE /api/leave/holidays/<id>/`
+- `POST /api/leave/holidays/import-ics/`
+- `GET /api/leave/calendar/`
+- `GET /api/leave/export.csv`
+- `GET /api/leave/ical/`
 
-## 8. Setup and Run (Local)
-### Prerequisites
-- Python 3.12+ recommended
-- `pip`
-- Optional for async email: Redis
+Organization:
 
-### Install
-```bash
+- `GET /api/org/context/`
+- `GET/POST /api/org/companies/`
+- `GET /api/org/tenants/`
+- `GET/POST/PATCH /api/org/units/`
+- `GET/POST/PATCH /api/org/locations/`
+- `GET/POST/PATCH /api/org/cost-centers/`
+- `GET/POST/PATCH /api/org/job-levels/`
+- `GET/POST/PATCH /api/org/positions/`
+- `GET/POST /api/org/form-fields/`
+- `PATCH/DELETE /api/org/form-fields/<id>/`
+
+HR/reporting:
+
+- `GET/PATCH /api/hr/employees/`
+- `POST /api/org/reporting/change-manager/`
+- `GET /api/org/reporting/direct-reports/`
+- `GET /api/org/reporting/tree/`
+
+Admin:
+
+- `GET/POST /api/admin/accounts/`
+- `GET/POST /api/admin/users/`
+- `PATCH/DELETE /api/admin/users/<id>/`
+- `POST /api/admin/users/<id>/password/`
+
+Talent/onboarding:
+
+- `GET/POST /api/talent/candidates/`
+- `GET/PATCH/DELETE /api/talent/candidates/<id>/`
+- `GET/POST /api/onboarding/tasks/`
+- `GET/PATCH/DELETE /api/onboarding/tasks/<id>/`
+
+Audit:
+
+- `GET /api/audit/events/`
+
+Architecture module:
+
+- `/api/architecture/workspace/*`
+- `/api/architecture/compliance/*`
+- `/api/architecture/workflow/*`
+- `/api/architecture/control/*`
+
+## 10) Frontend Route Map (`frontend/src/app`)
+
+- `/login`
+- `/forgot-password`
+- `/forgot-password/verify/[token]`
+- `/dashboard`
+- `/leave/apply`
+- `/company-board`
+- `/calendar`
+- `/approvals`
+- `/leave-policies`
+- `/admin-users`
+- `/talent`
+- `/onboarding`
+- `/organization`
+- `/architecture`
+- `/audit-trail`
+- `/profile`
+
+## 11) Local Setup (Backend + Frontend)
+
+### 11.1 Prerequisites
+
+- Python 3.12+ (3.13 works in this repo)
+- Node.js 20+
+- npm
+- Optional: Redis (for Celery)
+
+### 11.2 Backend Setup
+
+```powershell
 python -m venv .venv
 .venv\Scripts\activate
 python -m pip install -r requirements.txt
-```
-
-### Configure environment
-1. Copy `.env.example` to `.env`
-2. Fill values (minimum: `SECRET_KEY`, email settings if OTP by inbox is required)
-
-### Run migrations and seed defaults
-```bash
+copy .env.example .env
 python manage.py migrate
 python manage.py bootstrap_leave_data
 python manage.py createsuperuser
-```
-
-### Start application
-```bash
 python manage.py runserver
 ```
 
-Open:
+Backend URLs:
+
 - `http://127.0.0.1:8000/login/`
 - `http://127.0.0.1:8000/dashboard/`
 - `http://127.0.0.1:8000/admin/`
 - `http://127.0.0.1:8000/health/`
 
-### Start shadcn frontend
-```bash
+### 11.3 Frontend Setup
+
+```powershell
 cd frontend
 copy .env.example .env.local
 npm install
 npm run dev
 ```
 
-Open:
+Frontend URL:
+
 - `http://127.0.0.1:3000/login`
 
-## 9. First-Time Operational Flow
-Recommended sequence:
-1. Login as superuser.
-2. Go to `Admin Users`.
-3. Create managers and employees.
-4. For employees, ensure `can_portal_login=True` (handled by admin panel create flow).
-5. User clicks `Forgot Password (OTP)` to set initial password.
-6. User logs in and applies leave.
-7. Admin/HR reviews in `Approval Queue`.
+Default frontend env:
 
-## 10. Environment Variables
-Core variables from `.env.example`:
+- `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api`
 
-Security and host:
-- `DEBUG`: `1` local, `0` production
-- `SECRET_KEY`: required in non-dev
-- `ALLOWED_HOSTS`: comma-separated hosts
-- `CSRF_TRUSTED_ORIGINS`: comma-separated origins
-- `TIME_ZONE`: default `UTC`
+## 12) Desktop EXE Launcher
+
+Launcher:
+
+- `LeaveTrackerLauncher.exe`
+
+Source:
+
+- `desktop_app/launcher.py`
+
+What it does:
+
+1. Locates project root (`manage.py` + `frontend/package.json`)
+2. Runs migrations and bootstrap
+3. Starts Django (`127.0.0.1:8000`)
+4. Starts Next.js dev (`127.0.0.1:3000`)
+5. Opens browser to frontend login
+6. Logs to `desktop_app/logs/backend.log` and `desktop_app/logs/frontend.log`
+
+Rebuild EXE:
+
+```powershell
+.venv\Scripts\python.exe -m pip install -U pyinstaller
+.venv\Scripts\python.exe -m PyInstaller LeaveTrackerLauncher.spec --clean --noconfirm
+```
+
+## 13) Environment Variables
+
+Reference source:
+
+- `.env.example`
+- `leave_tracker_project/settings.py`
+
+Important groups:
+
+Security and hosts:
+- `DEBUG`
+- `SECRET_KEY`
+- `ALLOWED_HOSTS`
+- `CSRF_TRUSTED_ORIGINS`
+- `TIME_ZONE`
+
+Organization context and tenancy:
+- `FRONTEND_ORIGINS`
+- `REQUIRE_EXPLICIT_ORG_CONTEXT`
+- `ORG_CONTEXT_AUDIT_LOG`
+- `ENABLE_POSTGRES_SCHEMA_TENANCY`
+- `TENANCY_AUTO_CREATE_SCHEMA`
+- `ORG_CONTEXT_EXEMPT_PATHS`
+- `ORG_CONTEXT_EXEMPT_PATH_PREFIXES`
 
 Database:
-- `USE_DATABASE_URL`: `0` for SQLite, `1` to use `DATABASE_URL`
-- `DATABASE_URL`: PostgreSQL URL when enabled
+- `USE_DATABASE_URL`
+- `DATABASE_URL`
 
-Email/OTP:
+Email and OTP:
 - `EMAIL_BACKEND`
 - `EMAIL_HOST`
 - `EMAIL_PORT`
@@ -282,133 +469,145 @@ Email/OTP:
 - `EMAIL_HOST_PASSWORD`
 - `EMAIL_USE_TLS`
 - `EMAIL_USE_SSL`
+- `EMAIL_TIMEOUT`
 - `EMAIL_FAIL_SILENTLY`
 - `DEFAULT_FROM_EMAIL`
 
-Leave notifications/rules:
+Leave rules/notifications:
 - `MANAGER_EMAILS`
 - `LEAVE_EMAIL_NOTIFICATIONS_ENABLED`
-- `LEAVE_NOTIFICATION_TARGET` (`MANAGER|HR|TEAM|BOTH|ALL`)
+- `LEAVE_NOTIFICATION_TARGET`
 - `HR_MAILBOX`
 - `TEAM_DISTRIBUTION_EMAILS`
 - `LEAVE_RATE_LIMIT_PER_MINUTE`
 - `LEAVE_TEAM_OFF_THRESHOLD`
 
-Celery/Redis:
+Celery:
 - `USE_CELERY`
 - `CELERY_BROKER_URL`
 - `CELERY_RESULT_BACKEND`
 
-S3/R2 media storage:
+S3/R2 storage:
 - `AWS_STORAGE_BUCKET_NAME`
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 - `AWS_S3_REGION_NAME`
 - `AWS_S3_CUSTOM_DOMAIN`
 
-## 11. Business Logic Details
-Leave submission (`/leave/apply/`):
-- Computes working days (Mon-Fri, excluding holidays)
-- Computes `requested_units` based on portion:
-  - full day = `1.00`
-  - half day = `0.50`
-  - quarter day = `0.25`
-- Validates no overlapping pending/approved leave for same employee
-- Enforces per-minute request rate limit
-- Checks leave balance across calendar years
-- Saves as `PENDING`
-- Accepts supporting files; combined file size per submission is capped at 10 GB
-- Sends notification to recipients based on settings
+JWT:
+- `JWT_ACCESS_MINUTES`
+- `JWT_REFRESH_DAYS`
 
-Approval:
-- Admin/HR approve/reject in `/leave/approvals/`
-- Balance consumed only on approval
-- Balance released if an already-approved request changes away from approved
+## 14) First-Time Operational Flow
 
-## 12. Admin and Audit Operations
-Admin can:
-- Create users and assign role/manager
-- Enable/disable users
-- Delete users
-- Maintain leave policies and reason presets
-- Review and export leave records
-- Inspect audit trail
+Recommended start:
 
-Audit captures:
-- `LEAVE_CREATED`
-- `LEAVE_EDITED`
-- `LEAVE_CANCELLED`
-- `LEAVE_APPROVED`
-- `LEAVE_REJECTED`
+1. Create/activate superuser
+2. Login
+3. Open Admin Users page
+4. Create company/organization if needed
+5. Create HR/Manager/Employee users and assign organization
+6. Set portal access (`MAIN`, `ORGANIZATION`, or `BOTH`)
+7. User sets password via OTP flow or admin password set endpoint
+8. User logs in and uses leave/talent/onboarding features
 
-## 13. Useful Commands
-List users quickly:
-```bash
-python manage.py shell -c "from django.contrib.auth import get_user_model; U=get_user_model(); print(list(U.objects.values_list('username','email','role','is_active','can_portal_login')))"
+## 15) Deployment Overview
+
+### Backend (Railway or similar)
+
+- Use `Procfile` web command:
+- `python manage.py migrate --noinput && python manage.py bootstrap_leave_data && gunicorn leave_tracker_project.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120`
+
+Important:
+
+- Keep migrate/bootstrap in **start command**, not build command
+- Set `ALLOWED_HOSTS` to your backend host
+- Set `FRONTEND_ORIGINS` and `CSRF_TRUSTED_ORIGINS` correctly
+- Verify CORS with preflight `OPTIONS`
+
+### Frontend (Vercel or similar)
+
+- Root directory: `frontend`
+- Framework: Next.js
+- Required env:
+- `NEXT_PUBLIC_API_BASE_URL=https://<your-backend-domain>/api`
+
+## 16) GitHub Push Without Missing Features
+
+Push source/config/migrations, but do not track generated runtime folders.
+
+Recommended `.gitignore` entries:
+
+- `.venv/`
+- `__pycache__/`
+- `*.pyc`
+- `frontend/node_modules/`
+- `frontend/.next/`
+- `desktop_app/logs/`
+- `*.log`
+
+If large generated files were previously tracked, untrack first:
+
+```powershell
+git rm -r --cached --ignore-unmatch .venv frontend/node_modules frontend/.next __pycache__ desktop_app/logs
+git add -A
+git commit -m "Remove generated artifacts from tracking"
 ```
 
-Set or reset password:
-```bash
-python manage.py changepassword <username>
-```
+Then push normally.
 
-Create admin:
-```bash
-python manage.py createsuperuser
-```
+## 17) Common Troubleshooting
 
-Run checks/tests:
-```bash
-python manage.py check
-python manage.py test
-```
+### Login works locally but fails in deployed frontend
 
-## 14. Troubleshooting
-Common issues and fixes:
-
-### OTP prints in terminal instead of email inbox
-Cause:
-- `EMAIL_HOST` empty or backend set to console
-Fix:
-- Configure SMTP values in `.env`
-- Use app password for Gmail SMTP
-- Restart server after env changes
-
-### "Wrong username/password" even though user exists
 Check:
-- User `is_active=True`
-- `can_portal_login=True` (unless staff/superuser)
-- Password is usable (admin-created users initially get unusable password until OTP reset)
+- `NEXT_PUBLIC_API_BASE_URL` points to correct backend
+- Backend CORS/CSRF origins include frontend domain
+- Browser devtools preflight has `Access-Control-Allow-Origin`
 
-### `send_mail` returns `0`
+### Railway error: `'' is not a valid port number`
+
 Cause:
-- SMTP accepted no recipients or misconfigured transport
+- Gunicorn command running during build without runtime `$PORT`.
+
 Fix:
-- Validate `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, recipient email, TLS/SSL flags
+- Put gunicorn only in start/deploy command.
 
-### Migration error: `admin.0001_initial applied before users.0001_initial`
-Cause:
-- DB history created before custom user migration setup
-Fix (local dev):
-- Remove stale DB and rerun migrations from clean state
-- Ensure custom user model is present before first migration in new environments
+### OTP email stuck or timeout
 
-### Styles look plain or broken
 Check:
-- `DEBUG=1` in local mode
-- `static/css/app.css` exists and loads at `/static/css/app.css`
+- SMTP host/port/user/password
+- TLS/SSL flags
+- provider app password (for Gmail)
+- network egress rules in hosting platform
 
-## 15. Security and Production Notes
-- Never commit `.env` or secrets
-- Set `DEBUG=0` in production
-- Configure strict `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS`
-- Use real SMTP credentials securely
-- Prefer managed DB and object storage in production
-- Add HTTPS termination (reverse proxy) for deployment
+### GitHub rejects push due to large files
 
-## 16. Current Limitations
-- Automated test coverage is minimal and should be expanded for full production confidence
-- Desktop EXE launcher source scripts are not currently tracked in this snapshot (only backend web app source is guaranteed here)
+Cause:
+- `node_modules` / `.next` / binaries in git history.
 
-## 17. License and Ownership
-This repository currently does not include an explicit `LICENSE` file. Add one before public distribution.
+Fix:
+- remove from tracking + commit + push
+- if needed, fresh orphan snapshot and force push
+
+### Vercel `404 DEPLOYMENT_NOT_FOUND`
+
+Cause:
+- old deployment URL opened after new deploy.
+
+Fix:
+- open current active deployment URL from Vercel dashboard.
+
+## 18) Related Docs In This Repo
+
+- `docs/ENTIRE_PROJECT_EXPLANATION.md`
+- `docs/WORKSPACE_ORGANIZATION_ARCHITECTURE_DOCUMENT.md`
+- `docs/WORKSPACE_ORGANIZATION_ARCHITECTURE_DIAGRAM.md`
+- `docs/MULTIPLE_ARCHITECTURE_DIAGRAMS.md`
+- `docs/leave_tracker_multiorg.dbml`
+
+## 19) Final Notes
+
+- This project is production-capable but still benefits from expanded automated test coverage.
+- Organization isolation is robust at app-level and can be hardened further with schema-level tenancy for PostgreSQL.
+- For enterprise use, pair this with strict CI/CD checks, monitoring, backups, and security hardening.
