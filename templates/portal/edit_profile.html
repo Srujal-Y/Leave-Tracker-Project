@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <section class="samurai-card p-4">
+      <h1 class="h4 mb-3">Edit Profile</h1>
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="mb-3">
+          <label class="form-label">Profile Photo</label>
+          {{ form.photo }}
+          {{ form.photo.errors }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Phone Number</label>
+          {{ form.phone_number }}
+          {{ form.phone_number.errors }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Current Project</label>
+          {{ form.current_project }}
+          {{ form.current_project.errors }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Project Status</label>
+          {{ form.project_status }}
+          {{ form.project_status.errors }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Initiatives To Take</label>
+          {{ form.initiatives_to_take }}
+          {{ form.initiatives_to_take.errors }}
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-danger" type="submit">Save</button>
+          <a class="btn btn-outline-light" href="{% url 'portal:dashboard' %}">Cancel</a>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

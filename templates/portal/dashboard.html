@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="samurai-card p-4 mb-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+      <h1 class="mb-1">Employee Dashboard</h1>
+      <p class="muted mb-0">Track leave usage and approval statuses.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-danger" href="{% url 'leaves:apply_leave' %}">Apply Leave</a>
+      <a class="btn btn-outline-light" href="{% url 'leaves:company_board' %}">Company Board</a>
+      <a class="btn btn-outline-light" href="{% url 'leaves:my_ical' %}">Export iCal</a>
+    </div>
+  </div>
+</section>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-title">Total Leaves ({{ current_year }})</div>
+      <div class="stat-value">{{ total_leaves }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-title">Leaves Taken</div>
+      <div class="stat-value">{{ leaves_taken }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="stat-title">Remaining Balance</div>
+      <div class="stat-value">{{ remaining_balance }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <section class="samurai-card p-4">
+      <h2 class="h4 mb-3">Last 5 Leave Requests</h2>
+      <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Dates</th>
+              <th>Units</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for req in recent_requests %}
+              <tr>
+                <td>{{ req.leave_type.name }}</td>
+                <td>{{ req.start_date }} to {{ req.end_date }}</td>
+                <td>{{ req.requested_units }}</td>
+                <td>
+                  {% if req.status == "APPROVED" %}
+                    <span class="badge-status approved">Approved</span>
+                  {% elif req.status == "REJECTED" %}
+                    <span class="badge-status rejected">Rejected</span>
+                  {% elif req.status == "PENDING" %}
+                    <span class="badge-status pending">Pending</span>
+                  {% else %}
+                    <span class="badge-status cancelled">Cancelled</span>
+                  {% endif %}
+                </td>
+                <td class="d-flex gap-2">
+                  <a class="btn btn-sm btn-outline-light" href="{% url 'leaves:leave_detail' req.id %}">View</a>
+                  {% if req.status == "PENDING" %}
+                    <a class="btn btn-sm btn-outline-warning" href="{% url 'leaves:edit_leave' req.id %}">Edit</a>
+                    <form method="post" action="{% url 'leaves:cancel_leave' req.id %}">
+                      {% csrf_token %}
+                      <button class="btn btn-sm btn-outline-danger" type="submit">Cancel</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5">
+                  <div class="empty-state">
+                    <h3 class="h5">No leaves found</h3>
+                    <p class="muted">Start your first leave request now.</p>
+                    <a class="btn btn-danger" href="{% url 'leaves:apply_leave' %}">Apply Leave</a>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  <div class="col-lg-4">
+    <section class="samurai-card p-4 h-100">
+      <h2 class="h4 mb-3">Profile Card</h2>
+      <div class="d-flex gap-3">
+        <div class="avatar-frame">
+          {% if profile.photo %}
+            <img src="{{ profile.photo.url }}" alt="Profile photo">
+          {% else %}
+            <div class="w-100 h-100 d-flex align-items-center justify-content-center samurai-soft">No Photo</div>
+          {% endif %}
+        </div>
+        <div>
+          <div class="small muted">Phone</div>
+          <div>{{ profile.phone_number|default:"-" }}</div>
+          <div class="small muted mt-2">Project</div>
+          <div>{{ profile.current_project|default:"-" }}</div>
+          <div class="small muted mt-2">Project Status</div>
+          <div>{{ profile.project_status|default:"-" }}</div>
+        </div>
+      </div>
+      <div class="small muted mt-3">Initiatives</div>
+      <div>{{ profile.initiatives_to_take|default:"-" }}</div>
+      <div class="small muted mt-3">Remaining Balance</div>
+      <div class="fw-semibold">{{ remaining_balance }} day(s)</div>
+    </section>
+  </div>
+</div>
+{% endblock %}

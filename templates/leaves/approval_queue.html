@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="samurai-card p-4">
+  <div class="d-flex justify-content-between flex-wrap gap-2 mb-3">
+    <div>
+      <h1 class="h4 mb-1">Approval Queue</h1>
+      <p class="muted mb-0">Admin/HR review required before leave becomes approved.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-light" href="?status=PENDING">Pending</a>
+      <a class="btn btn-outline-light" href="?status=APPROVED">Approved</a>
+      <a class="btn btn-outline-light" href="?status=REJECTED">Rejected</a>
+      <a class="btn btn-outline-light" href="?status=CANCELLED">Cancelled</a>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-dark align-middle">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Type</th>
+          <th>Dates</th>
+          <th>Units</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for req in requests %}
+          <tr>
+            <td>{{ req.employee.get_full_name|default:req.employee.username }}</td>
+            <td>{{ req.leave_type.name }}</td>
+            <td>{{ req.start_date }} to {{ req.end_date }}</td>
+            <td>{{ req.requested_units }}</td>
+            <td>{{ req.get_status_display }}</td>
+            <td><a class="btn btn-sm btn-danger" href="{% url 'leaves:review_leave' req.id %}">Review</a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">No requests.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

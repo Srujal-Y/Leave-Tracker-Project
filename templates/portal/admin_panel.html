@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="samurai-card p-4">
+  <div class="d-flex justify-content-between flex-wrap gap-2 mb-3">
+    <div>
+      <h1 class="h4 mb-1">Admin User Panel</h1>
+      <p class="muted mb-0">Create, update access, and delete employee accounts.</p>
+    </div>
+    <a class="btn btn-danger" href="{% url 'users:admin_create_user' %}">Create User</a>
+  </div>
+
+  <div class="alert alert-info py-2 mb-3">
+    <div><b>Organization Scope:</b> {{ company.name }}</div>
+    <div class="small">
+      Showing only employees created by HR of this organization.
+      Visible: {{ visible_count }} | Hidden by scope: {{ hidden_count }}
+    </div>
+  </div>
+
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-md-6">
+      <input class="form-control" name="q" value="{{ q }}" placeholder="Search by name/email">
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-outline-light" type="submit">Search</button>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-dark align-middle">
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Name</th>
+          <th>Role</th>
+          <th>Created By (HR)</th>
+          <th>Created In Org</th>
+          <th>Tracker Access</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+          <tr>
+            <td>{{ u.email|default:u.username }}</td>
+            <td>{{ u.get_full_name|default:"-" }}</td>
+            <td>{{ u.get_role_display }}</td>
+            <td>
+              {% if u.created_by %}
+                {{ u.created_by.get_full_name|default:u.created_by.username }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              {% if u.created_in_organization %}
+                {{ u.created_in_organization.name }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>{{ u.portal_access }}</td>
+            <td class="d-flex gap-2">
+              <form method="post" action="{% url 'users:admin_toggle_user' u.id %}">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-warning" type="submit">Toggle Access</button>
+              </form>
+              <a class="btn btn-sm btn-outline-danger" href="{% url 'users:admin_delete_user' u.id %}">Delete</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7">No users found in this organization scope.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

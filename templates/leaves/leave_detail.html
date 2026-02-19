@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="samurai-card p-4">
+  <h1 class="h4 mb-3">Leave Request Detail</h1>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div><b>Employee:</b> {{ leave_request.employee.get_full_name|default:leave_request.employee.username }}</div>
+      <div><b>Email:</b> {{ leave_request.employee.email }}</div>
+      <div><b>Leave Type:</b> {{ leave_request.leave_type.name }}</div>
+      <div><b>Label:</b> {{ leave_request.leave_label }}</div>
+      <div><b>Reason:</b> {{ leave_request.display_reason|default:"-" }}</div>
+    </div>
+    <div class="col-md-6">
+      <div><b>From:</b> {{ leave_request.start_date }}</div>
+      <div><b>To:</b> {{ leave_request.end_date }}</div>
+      <div><b>Calendar days:</b> {{ leave_request.calendar_days }}</div>
+      <div><b>Requested units:</b> {{ leave_request.requested_units }}</div>
+      <div><b>Status:</b> {{ leave_request.get_status_display }}</div>
+      <div><b>Approver:</b> {{ leave_request.approver|default:"-" }}</div>
+    </div>
+  </div>
+  <hr class="my-3">
+  <h2 class="h5 mb-2">Supporting Documents</h2>
+  {% if attachments %}
+    <ul class="mb-0">
+      {% for attachment in attachments %}
+        <li>
+          <a href="{{ attachment.file.url }}" target="_blank" rel="noopener">{{ attachment.original_name|default:attachment.file.name }}</a>
+          ({{ attachment.size_mb }} MB)
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted mb-0">No supporting documents uploaded.</p>
+  {% endif %}
+</section>
+{% endblock %}

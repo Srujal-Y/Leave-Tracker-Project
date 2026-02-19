@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="samurai-card p-4 mb-3">
+  <div class="d-flex justify-content-between flex-wrap gap-2">
+    <div>
+      <h1 class="h4 mb-1">Leave Policies</h1>
+      <p class="muted mb-0">Admin/HR can manage leave types and reason presets. Public holidays are admin-only.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-danger" href="{% url 'leaves:leave_type_create' %}">Add Leave Type</a>
+      <a class="btn btn-outline-light" href="{% url 'leaves:reason_preset_create' %}">Add Reason Preset</a>
+      {% if is_admin_user %}
+        <a class="btn btn-outline-warning" href="{% url 'leaves:holiday_create' %}">Add Public Holiday</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <section class="samurai-card p-4 h-100">
+      <h2 class="h5 mb-3">Leave Types</h2>
+      <div class="table-responsive">
+        <table class="table table-dark align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Quota</th>
+              <th>Paid</th>
+              <th>Active</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in leave_types %}
+              <tr>
+                <td>{{ t.name }}</td>
+                <td>{{ t.max_days }}</td>
+                <td>{% if t.is_paid %}Yes{% else %}No{% endif %}</td>
+                <td>{% if t.active %}Yes{% else %}No{% endif %}</td>
+                <td><a class="btn btn-sm btn-outline-warning" href="{% url 'leaves:leave_type_edit' t.id %}">Edit</a></td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5">No leave types configured.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  <div class="col-lg-6">
+    <section class="samurai-card p-4 h-100">
+      <h2 class="h5 mb-3">Reason Presets</h2>
+      <div class="table-responsive">
+        <table class="table table-dark align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Active</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in reason_presets %}
+              <tr>
+                <td>{{ r.label }}</td>
+                <td>{% if r.active %}Yes{% else %}No{% endif %}</td>
+                <td><a class="btn btn-sm btn-outline-warning" href="{% url 'leaves:reason_preset_edit' r.id %}">Edit</a></td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="3">No reason presets configured.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  <div class="col-12">
+    <section class="samurai-card p-4">
+      <h2 class="h5 mb-3">Public Holidays</h2>
+      <div class="table-responsive">
+        <table class="table table-dark align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Name</th>
+              {% if is_admin_user %}
+                <th>Actions</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for holiday in holidays %}
+              <tr>
+                <td>{{ holiday.date }}</td>
+                <td>{{ holiday.name }}</td>
+                {% if is_admin_user %}
+                  <td class="d-flex gap-2">
+                    <a class="btn btn-sm btn-outline-warning" href="{% url 'leaves:holiday_edit' holiday.id %}">Edit</a>
+                    <form method="post" action="{% url 'leaves:holiday_delete' holiday.id %}">
+                      {% csrf_token %}
+                      <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                    </form>
+                  </td>
+                {% endif %}
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="{% if is_admin_user %}3{% else %}2{% endif %}">No holidays configured.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

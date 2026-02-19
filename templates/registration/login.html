@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-4">
+    <section class="samurai-card p-4">
+      <h1 class="h3 mb-3">Portal Login</h1>
+      {% if login_company %}
+      <p class="mb-2"><span class="badge bg-danger">Organization Server</span></p>
+      <p class="muted mb-4">HR login for <strong>{{ login_company.name }}</strong>.</p>
+      {% else %}
+      <p class="muted mb-4">Only employees created by Admin can login.</p>
+      {% endif %}
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label">Organization Name (for Organization Server)</label>
+          <input
+            type="text"
+            name="company_name"
+            class="form-control"
+            placeholder="Type exact company name for organization login"
+            value="{% if form.data.company_name %}{{ form.data.company_name }}{% elif login_company %}{{ login_company.name }}{% endif %}"
+          >
+          <small class="text-muted">Only HR users assigned to this company can login to Organization Server.</small>
+        </div>
+        <input type="hidden" name="next" value="{{ next|default:'/dashboard/' }}">
+        {{ form.non_field_errors }}
+        <div class="mb-3">
+          <label class="form-label">Email or Username</label>
+          {{ form.username }}
+          {{ form.username.errors }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Password</label>
+          {{ form.password }}
+          {{ form.password.errors }}
+        </div>
+        <div class="d-grid gap-2">
+          <button class="btn btn-danger" type="submit">Login</button>
+          <a class="btn btn-outline-light" href="{% url 'users:password_reset_request' %}">Forgot Password (OTP)</a>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

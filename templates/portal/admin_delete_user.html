@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-5">
+    <section class="samurai-card p-4">
+      <h1 class="h4 mb-3">Delete User</h1>
+      <p>Delete <b>{{ target_user.email|default:target_user.username }}</b>?</p>
+      <form method="post">
+        {% csrf_token %}
+        <button class="btn btn-danger" type="submit">Confirm Delete</button>
+        <a class="btn btn-outline-light" href="{% url 'users:admin_panel' %}">Cancel</a>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

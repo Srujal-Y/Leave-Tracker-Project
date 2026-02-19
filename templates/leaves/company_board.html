@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="samurai-card p-4 mb-3">
+  <div class="d-flex flex-wrap justify-content-between gap-2">
+    <div>
+      <h1 class="h4 mb-1">Company Leave Board</h1>
+      <p class="muted mb-0">Search, filter, paginate, and inspect leave records.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-light" href="{% url 'leaves:team_calendar' %}">Calendar</a>
+      {% if user.admin_account or user.role == "HR" %}
+        <a class="btn btn-outline-warning" href="{% url 'leaves:export_csv' %}?q={{ filters.q }}&employee={{ filters.employee }}&leave_type={{ filters.leave_type }}&month={{ filters.month }}&portion={{ filters.portion }}&status={{ filters.status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}">Export CSV</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="samurai-card p-4 mb-3">
+  <form method="get" class="row g-2">
+    <div class="col-md-3"><input class="form-control" name="q" value="{{ filters.q }}" placeholder="Search name/email/reason"></div>
+    <div class="col-md-2">
+      <select class="form-select" name="employee">
+        <option value="">All employees</option>
+        {% for emp in employees %}
+          <option value="{{ emp.id }}" {% if filters.employee == emp.id|stringformat:"s" %}selected{% endif %}>
+            {{ emp.get_full_name|default:emp.username }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <select class="form-select" name="leave_type">
+        <option value="">All types</option>
+        {% for lt in leave_types %}
+          <option value="{{ lt.id }}" {% if filters.leave_type == lt.id|stringformat:"s" %}selected{% endif %}>{{ lt.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <input class="form-control" type="month" name="month" value="{{ filters.month }}">
+    </div>
+    <div class="col-md-1">
+      <select class="form-select" name="portion">
+        <option value="">Portion</option>
+        <option value="FULL" {% if filters.portion == "FULL" %}selected{% endif %}>Full</option>
+        <option value="HALF" {% if filters.portion == "HALF" %}selected{% endif %}>Half</option>
+        <option value="QUARTER" {% if filters.portion == "QUARTER" %}selected{% endif %}>Quarter</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <select class="form-select" name="status">
+        <option value="">All status</option>
+        <option value="PENDING" {% if filters.status == "PENDING" %}selected{% endif %}>Pending</option>
+        <option value="APPROVED" {% if filters.status == "APPROVED" %}selected{% endif %}>Approved</option>
+        <option value="REJECTED" {% if filters.status == "REJECTED" %}selected{% endif %}>Rejected</option>
+        <option value="CANCELLED" {% if filters.status == "CANCELLED" %}selected{% endif %}>Cancelled</option>
+      </select>
+    </div>
+    <div class="col-md-2"><input class="form-control" type="date" name="date_from" value="{{ filters.date_from }}"></div>
+    <div class="col-md-2"><input class="form-control" type="date" name="date_to" value="{{ filters.date_to }}"></div>
+    <div class="col-md-2 d-flex gap-2">
+      <button class="btn btn-danger" type="submit">Filter</button>
+      <a class="btn btn-outline-light" href="{% url 'leaves:company_board' %}">Clear</a>
+    </div>
+  </form>
+</section>
+
+<section class="samurai-card p-3">
+  {% if leaves %}
+    <div class="accordion" id="leaveAccordion">
+      {% for req in leaves %}
+        <div class="accordion-item bg-transparent text-light border-secondary-subtle">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-transparent text-light {% if highlight_id == req.id|stringformat:'s' %}row-highlight{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#item{{ req.id }}">
+              <div class="d-flex w-100 justify-content-between pe-2">
+                <span><b>{{ req.employee.get_full_name|default:req.employee.username }}</b> | {{ req.start_date }} to {{ req.end_date }}</span>
+                <span>{{ req.leave_type.name }} | {{ req.requested_units }} day(s)</span>
+              </div>
+            </button>
+          </h2>
+          <div id="item{{ req.id }}" class="accordion-collapse collapse" data-bs-parent="#leaveAccordion">
+            <div class="accordion-body">
+              <div class="row g-2">
+                <div class="col-md-3"><b>Status:</b>
+                  {% if req.status == "APPROVED" %}
+                    <span class="badge-status approved">Approved</span>
+                  {% elif req.status == "REJECTED" %}
+                    <span class="badge-status rejected">Rejected</span>
+                  {% elif req.status == "PENDING" %}
+                    <span class="badge-status pending">Pending</span>
+                  {% else %}
+                    <span class="badge-status cancelled">Cancelled</span>
+                  {% endif %}
+                </div>
+                <div class="col-md-3"><b>Portion:</b> {{ req.get_portion_display }}</div>
+                <div class="col-md-3"><b>Created:</b> {{ req.created_at|date:"Y-m-d H:i" }}</div>
+                <div class="col-md-3"><a class="btn btn-sm btn-outline-light" href="{% url 'leaves:leave_detail' req.id %}">Open</a></div>
+              </div>
+              <div class="mt-2"><b>Reason:</b> {{ req.display_reason|default:"-" }}</div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% if page_obj.has_next %}
+      <div class="load-more-wrap">
+        <a class="btn btn-outline-warning" href="?q={{ filters.q }}&employee={{ filters.employee }}&leave_type={{ filters.leave_type }}&month={{ filters.month }}&portion={{ filters.portion }}&status={{ filters.status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&page={{ page_obj.next_page_number }}">Load More</a>
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="empty-state">
+      <h3 class="h5">No leaves found</h3>
+      <p class="muted">Try changing filters or create a leave request.</p>
+      <a class="btn btn-danger" href="{% url 'leaves:apply_leave' %}">Apply Leave</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="samurai-card p-4 mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="h4 mb-1">Team Calendar</h1>
+      {% if mode == "week" %}
+        <p class="muted mb-0">Week view: {{ week_start }} to {{ week_end }}</p>
+      {% else %}
+        <p class="muted mb-0">Month view: {{ anchor|date:"F Y" }}</p>
+      {% endif %}
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="btn btn-outline-light {% if mode == 'month' %}active{% endif %}" href="?mode=month&month={{ anchor|date:'Y-m' }}">Month</a>
+      <a class="btn btn-outline-light {% if mode == 'week' %}active{% endif %}" href="?mode=week&week_date={{ week_anchor|date:'Y-m-d' }}">Week</a>
+      {% if user.admin_account %}
+        <a class="btn btn-outline-warning" href="{% url 'leaves:holiday_create' %}">Add Holiday</a>
+      {% endif %}
+      {% if mode == "week" %}
+        <a class="btn btn-outline-light" href="?mode=week&week_date={{ prev_week }}">Prev Week</a>
+        <a class="btn btn-outline-light" href="?mode=week&week_date={{ next_week }}">Next Week</a>
+      {% else %}
+        <a class="btn btn-outline-light" href="?mode=month&month={{ prev_month }}">Prev Month</a>
+        <a class="btn btn-outline-light" href="?mode=month&month={{ next_month }}">Next Month</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{% if mode == "week" %}
+  <section class="samurai-card p-4 mb-3">
+    <div class="row g-2">
+      {% for cell in week_entries %}
+        <div class="col-md">
+          <div class="calendar-day">
+            <div class="fw-semibold">{{ cell.day|date:"D, M d" }}</div>
+            {% if cell.entries %}
+              <div class="count mb-2">{{ cell.entries|length }} off</div>
+              <ul class="mb-0 ps-3 small">
+                {% for item in cell.entries %}
+                  <li>{{ item.employee.get_full_name|default:item.employee.username }} ({{ item.leave_type.name }})</li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <div class="small muted mt-2">No one off</div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+{% else %}
+  <section class="samurai-card p-4 mb-3">
+    <div class="calendar-grid mb-2 text-center small muted">
+      <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+    </div>
+    {% for week in calendar_rows %}
+      <div class="calendar-grid mb-2">
+        {% for cell in week %}
+          {% if cell.day %}
+            <a class="calendar-day text-decoration-none text-light" href="?mode=month&month={{ anchor|date:'Y-m' }}&day={{ anchor|date:'Y-m' }}-{{ cell.day|stringformat:'02d' }}">
+              <div class="fw-semibold">{{ cell.day }}</div>
+              {% if cell.entries %}
+                <div class="count">{{ cell.entries|length }} off</div>
+              {% endif %}
+            </a>
+          {% else %}
+            <div class="calendar-day empty"></div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section class="samurai-card p-4">
+    <h2 class="h5">Leaves on {{ selected_date|default:"selected day" }}</h2>
+    {% if selected_entries %}
+      <ul class="mb-0">
+        {% for item in selected_entries %}
+          <li>{{ item.employee.get_full_name|default:item.employee.username }} - {{ item.leave_type.name }} ({{ item.requested_units }} day)</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted mb-0">Select a day to see approved leaves.</p>
+    {% endif %}
+  </section>
+{% endif %}
+{% endblock %}

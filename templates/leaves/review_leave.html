@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <section class="samurai-card p-4">
+      <h1 class="h4 mb-3">Review Leave Request</h1>
+      <div class="mb-3">
+        <div><b>Employee:</b> {{ leave_request.employee.get_full_name|default:leave_request.employee.username }}</div>
+        <div><b>Dates:</b> {{ leave_request.start_date }} to {{ leave_request.end_date }}</div>
+        <div><b>Type:</b> {{ leave_request.leave_type.name }}</div>
+        <div><b>Units:</b> {{ leave_request.requested_units }}</div>
+        <div><b>Reason:</b> {{ leave_request.display_reason|default:"-" }}</div>
+      </div>
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label">Reviewer Note</label>
+          <textarea class="form-control" name="manager_note" rows="3">{{ leave_request.manager_note }}</textarea>
+        </div>
+        <div class="d-flex gap-2">
+          {% if leave_request.status == "PENDING" %}
+            <button class="btn btn-success" type="submit" name="action" value="approve">Approve</button>
+            <button class="btn btn-danger" type="submit" name="action" value="reject">Reject</button>
+          {% endif %}
+          <a class="btn btn-outline-light" href="{% url 'leaves:approval_queue' %}">Back</a>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}
